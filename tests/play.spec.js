@@ -172,12 +172,12 @@ test("a complete game and the next one (de, normal)", async ({ page }) => {
   expect(stats.normal.points).toBe(scores[0]);
 });
 
-test("calling Re or Kontra (en, easy)", async ({ page }) => {
+test("calling Re or Kontra (en, strong)", async ({ page }) => {
   test.setTimeout(120_000);
   const g = byCode.en.t.game;
   await seed(page, 4);
   await openPlay(page, byCode.en);
-  await start(page, { level: "easy" });
+  await start(page, { level: "strong" });
   expect(await waitForMe(page)).toBe("reserve");
   await page.locator('[data-declare="healthy"]').click();
   await waitForMe(page);

@@ -64,8 +64,22 @@ export function plainOrder(contract) {
   return ["A", "10", "K", "9"];
 }
 
+// The orders are looked up very often (the bots play whole games in their head), so they
+// are computed once per contract.
+const CONTRACTS = ["normal", "wedding", "silent", ...SOLOS];
+const TRUMP_INDEX = Object.fromEntries(CONTRACTS.map((c) => [c, new Map(trumpOrder(c).map((k, i) => [k, i]))]));
+const PLAIN_INDEX = Object.fromEntries(CONTRACTS.map((c) => [c, new Map(plainOrder(c).map((r, i) => [r, i]))]));
+
+// The same by card id ("Q♣a"), which saves building the key for the 48 real cards.
+const TRUMP_BY_ID = Object.fromEntries(
+  CONTRACTS.map((c) => [c, new Map(createDeck().map((card) => [card.id, TRUMP_INDEX[c].get(key(card)) ?? -1]))]),
+);
+
 /** Position in the trump order (0 = highest), or -1 for a plain card. */
-export const trumpRank = (contract, card) => trumpOrder(contract).indexOf(key(card));
+export function trumpRank(contract, card) {
+  const rank = TRUMP_BY_ID[contract].get(card.id);
+  return rank !== undefined ? rank : (TRUMP_INDEX[contract].get(card.rank + card.suit) ?? -1);
+}
 export const isTrump = (contract, card) => trumpRank(contract, card) >= 0;
 /** What a card counts as for following suit: "T" for trump, otherwise its suit. */
 export const group = (contract, card) => (isTrump(contract, card) ? "T" : card.suit);
@@ -76,8 +90,8 @@ export function beats(contract, card, best, led) {
   const b = trumpRank(contract, card);
   if (b >= 0) return a < 0 || b < a; // equal cards: the first one stays
   if (a >= 0 || card.suit !== led) return false;
-  const order = plainOrder(contract);
-  return order.indexOf(card.rank) < order.indexOf(best.rank);
+  const order = PLAIN_INDEX[contract];
+  return order.get(card.rank) < order.get(best.rank);
 }
 
 /** Index (into the trick) of the card that wins it so far. */

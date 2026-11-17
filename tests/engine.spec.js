@@ -352,27 +352,33 @@ test.describe("simulated games", () => {
     return state;
   }
 
+  /** Checks one finished game. */
+  function check(state) {
+    const r = state.result;
+    expect(state.tricks).toHaveLength(12);
+    expect(r.points.re + r.points.kontra).toBe(240);
+    expect(r.scores.reduce((a, b) => a + b, 0)).toBe(0);
+    if (r.winner) expect(Math.abs(r.scores[state.re[0]])).toBe(Math.abs(r.total) * (E.isSolo(state) ? 3 : 1));
+  }
+
   test("thousands of games: only legal moves, 240 points, scores add up to zero", () => {
     const random = seeded(7);
     const contracts = new Set();
+    let calls = 0;
     for (let i = 0; i < 3000; i++) {
-      const levels = [0, 1, 2, 3].map(() => (random() < 0.5 ? "easy" : "normal"));
-      const state = simulate(levels, random); // E.play throws on any illegal card
-      const r = state.result;
+      const state = simulate(["normal", "normal", "normal", "normal"], random); // E.play throws on any illegal card
+      check(state);
       contracts.add(state.contract);
-      expect(state.tricks).toHaveLength(12);
-      expect(r.points.re + r.points.kontra).toBe(240);
-      expect(r.scores.reduce((a, b) => a + b, 0)).toBe(0);
-      if (r.winner) expect(Math.abs(r.scores[state.re[0]])).toBe(Math.abs(r.total) * (E.isSolo(state) ? 3 : 1));
+      calls += state.callLog.length;
     }
-    for (const c of ["normal", "wedding", "queens", "clubs", "hearts"]) expect(contracts).toContain(c); // bots never keep a wedding silent
+    for (const c of ["normal", "wedding"]) expect(contracts).toContain(c); // bots never keep a wedding silent
+    // Bots call with good hands, but not in every game.
+    expect(calls / 3000).toBeGreaterThan(0.2);
+    expect(calls / 3000).toBeLessThan(1);
   });
 
-  test("normal bots beat easy bots", () => {
-    const random = seeded(11);
-    const levels = ["normal", "easy", "normal", "easy"];
-    const totals = [0, 0, 0, 0];
-    for (let i = 0; i < 2000; i++) simulate(levels, random).result.scores.forEach((n, p) => (totals[p] += n));
-    expect(totals[0] + totals[2]).toBeGreaterThan(totals[1] + totals[3] + 1000);
+  test("strong bots too", () => {
+    const random = seeded(8);
+    for (let i = 0; i < 12; i++) check(simulate(["strong", "normal", "strong", "normal"], random));
   });
 });

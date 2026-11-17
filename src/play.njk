@@ -36,9 +36,10 @@ scripts: ["/assets/game/ui.js"]
       <fieldset>
         <legend>{{ g.level }}</legend>
         <div class="choices">
-          <label><input type="radio" name="level" value="easy"><span>{{ g.easy }}</span></label>
           <label><input type="radio" name="level" value="normal" checked><span>{{ g.normal }}</span></label>
+          <label><input type="radio" name="level" value="strong"><span>{{ g.strong }}</span></label>
         </div>
+        <p class="levelhelp">{{ g.levelHelp }}</p>
       </fieldset>
       <button type="submit" class="bigbtn">{{ g.start }}</button>
     </form>
