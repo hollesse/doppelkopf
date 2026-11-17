@@ -1,0 +1,15 @@
+{#- Language menu: plain links to the same page in every language. -#}
+<div class="langbar">
+  <details class="langmenu">
+    <summary aria-label="Language / Sprache / Idioma: {{ lang.name }}">
+      <span class="flag" aria-hidden="true">{{ lang.flag }}</span>
+      <span>{{ lang.name }}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <ul>
+      {%- for l in languages %}
+      <li><a href="{{ l.path }}{{ subpath or '' }}" hreflang="{{ l.htmlLang }}" lang="{{ l.htmlLang }}" data-lang="{{ l.code }}"{% if l.code == lang.code %} aria-current="page"{% endif %}><span class="flag" aria-hidden="true">{{ l.flag }}</span>{{ l.name }}</a></li>
+      {%- endfor %}
+    </ul>
+  </details>
+</div>

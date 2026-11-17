@@ -1,0 +1,1173 @@
+/* ==========================================================================
+   Doppelkopf in 5 minutes
+   Sections follow the page from top to bottom.
+   ========================================================================== */
+
+/* ---------- Design tokens ---------- */
+
+:root {
+  /* Page colours (switch in dark mode) */
+  --felt: #1d4f73;
+  --felt-deep: #143a57;
+  --felt-text: #f3f2ec;
+  --felt-soft: #bcd2e2;
+  --paper: #fbfaf6;
+  --page: #f1f3f5;
+  --ink: #1a1d21;
+  --muted: #53606b;
+  --red: #c8243b;
+  --gold: #e8b22c;
+  --line: #d7dce1;
+  --cheat-dt: #ff8a97;
+
+  /* Fixed colours: cards and wood always look the same */
+  --card-ink: #1a1d21;
+  --card-red: #c8243b;
+  --card-red-dark: #a61c30;
+  --wood-a: #bc8752;
+  --wood-b: #a46f3c;
+  --wood-edge: #6e4826;
+  --wood-text: #fff4e2;
+  --wood-text-shadow: 0 1px 2px rgba(40, 20, 5, 0.6);
+
+  /* Fonts */
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Archivo Black", "Arial Black", Impact, sans-serif;
+  --font-display-weight: 400;
+  --font-cards: "Archivo Black", "Arial Black", sans-serif;
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --felt: #183f5c;
+    --felt-deep: #0e2a40;
+    --felt-text: #eef2f6;
+    --felt-soft: #9fbbd0;
+    --paper: #f4f2ec;
+    --page: #111519;
+    --ink: #e8ecef;
+    --muted: #a6b2bc;
+    --red: #e0485d;
+    --gold: #f0c04a;
+    --line: #29323a;
+    --cheat-dt: #a61c30;
+    color-scheme: dark;
+  }
+}
+
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 64px);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--font-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Keeps the notch area coloured while scrolling. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--felt-deep);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  line-height: 1.08;
+}
+
+h2 {
+  margin-bottom: 0.6rem;
+  font-size: clamp(1.7rem, 6.5vw, 2.4rem);
+}
+
+h3 {
+  margin-bottom: 0.25rem;
+  font-size: 1.15rem;
+}
+
+p {
+  margin: 0 0 0.9rem;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Things that need JavaScript stay hidden until it runs. */
+html:not(.js) .js-only {
+  display: none !important;
+}
+
+/* ---------- Layout ---------- */
+
+.wrap {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+section {
+  padding: 2.6rem 0 1rem;
+}
+
+.lead {
+  color: var(--muted);
+  font-size: 1.08rem;
+}
+
+h3.sub {
+  margin: 1.8rem 0 0.4rem;
+  font-size: 1.3rem;
+}
+
+h3.sub.first {
+  margin-top: 0.8rem;
+}
+
+/* ---------- Playing cards ---------- */
+
+.card {
+  --w: 96px;
+  position: relative;
+  flex: none;
+  width: var(--w);
+  height: calc(var(--w) * 1.4);
+  border-radius: calc(var(--w) * 0.1);
+  background: var(--paper);
+  color: var(--card-ink);
+  font-family: var(--font-cards);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.card.r {
+  color: var(--card-red);
+}
+
+.card.sm {
+  --w: 58px;
+}
+
+.card.xs {
+  --w: 44px;
+}
+
+.card.gold {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.card.back {
+  border: calc(var(--w) * 0.06) solid var(--paper);
+  background: repeating-linear-gradient(45deg, var(--card-red) 0 6px, var(--card-red-dark) 6px 12px);
+}
+
+/* Index corner: rank with the suit below */
+.card .c {
+  position: absolute;
+  top: 6%;
+  left: 9%;
+  font-size: calc(var(--w) * 0.24);
+  line-height: 0.95;
+  text-align: center;
+}
+
+.card .c span {
+  display: block;
+  font-size: 0.8em;
+}
+
+/* Big suit in the middle */
+.card .pip {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--w) * 0.5);
+}
+
+/* Card graphics are laid out left to right in every language.
+   (cardRow reverses rows for right-to-left pages, should one be added.) */
+.card,
+.fan,
+.four,
+.ranks,
+.deck .row,
+.plain .row,
+.trick .row,
+.values,
+.teams .row {
+  direction: ltr;
+}
+
+/* A row of cards */
+.row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Wooden table */
+.wood {
+  border-radius: 16px;
+  padding: 1.4rem 1rem 1.1rem;
+  color: var(--wood-text);
+  background:
+    repeating-linear-gradient(0deg, rgba(60, 32, 12, 0.28) 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(0deg, rgba(255, 235, 200, 0.06) 0 2px, rgba(70, 40, 15, 0.07) 2px 4px, transparent 4px 9px, rgba(70, 40, 15, 0.05) 9px 10px, transparent 10px 15px),
+    radial-gradient(ellipse 45% 7% at 28% 30%, rgba(80, 45, 15, 0.32), transparent 70%),
+    radial-gradient(ellipse 35% 5% at 72% 62%, rgba(80, 45, 15, 0.28), transparent 70%),
+    radial-gradient(ellipse 50% 6% at 40% 88%, rgba(80, 45, 15, 0.22), transparent 70%),
+    linear-gradient(180deg, var(--wood-a), var(--wood-b));
+  box-shadow: inset 0 0 0 2px rgba(60, 32, 12, 0.35), 0 5px 0 var(--wood-edge), 0 10px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* ---------- Header ---------- */
+
+.hero {
+  overflow-x: clip;
+  padding: 1rem 0 2.6rem;
+  background: radial-gradient(120% 90% at 50% 0%, var(--felt) 0%, var(--felt-deep) 100%);
+  color: var(--felt-text);
+}
+
+.hero h1 {
+  font-size: clamp(2.6rem, 13vw, 4.6rem);
+  letter-spacing: -0.01em;
+}
+
+.hero p {
+  max-width: 30rem;
+  color: var(--felt-soft);
+  font-size: 1.15rem;
+}
+
+/* Language menu: a plain <details> with links, works without JavaScript */
+.langbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.langmenu {
+  position: relative;
+}
+
+.langmenu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem 0.55rem 0.7rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--felt-text);
+  font: 700 0.95rem/1 var(--font-body);
+  list-style: none;
+  cursor: pointer;
+}
+
+.langmenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.langmenu summary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.langmenu svg {
+  flex: none;
+  transition: transform 0.15s;
+}
+
+.langmenu[open] svg {
+  transform: rotate(180deg);
+}
+
+.langmenu .flag {
+  font-family: var(--font-emoji);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.langmenu ul {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 20;
+  min-width: 15rem;
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--card-ink);
+  list-style: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.langmenu a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.langmenu a:hover {
+  background: #ecefe8;
+}
+
+.langmenu a[aria-current="page"] {
+  background: #e2eae4;
+  font-weight: 700;
+}
+
+/* Fanned cards */
+.fan {
+  position: relative;
+  width: 260px;
+  height: 190px;
+  margin: 1.6rem auto 1.4rem;
+}
+
+.fan .card {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform-origin: 50% 120%;
+}
+
+.fan .card:nth-child(1) {
+  transform: translateX(-50%) rotate(-20deg);
+}
+
+.fan .card:nth-child(2) {
+  transform: translateX(-50%) rotate(0deg) translateY(-8px);
+}
+
+.fan .card:nth-child(3) {
+  transform: translateX(-50%) rotate(20deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fan .card {
+    animation: deal 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .fan .card:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+
+  .fan .card:nth-child(2) {
+    animation-delay: 0.18s;
+  }
+
+  .fan .card:nth-child(3) {
+    animation-delay: 0.31s;
+  }
+
+  @keyframes deal {
+    from {
+      transform: translateX(-50%) translateY(60px) rotate(0);
+      opacity: 0;
+    }
+  }
+}
+
+/* Goal box */
+.goal {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  margin-top: 0.4rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.goal-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.goal p {
+  margin: 0;
+  color: var(--felt-text);
+  font-size: 1.05rem;
+}
+
+.goal strong {
+  color: var(--gold);
+}
+
+/* ---------- Section navigation ---------- */
+
+nav {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 9;
+  background: var(--felt-deep);
+  color: var(--felt-text);
+}
+
+nav ul {
+  display: flex;
+  gap: 0.25rem;
+  max-width: 40rem;
+  overflow-x: auto;
+  margin: 0 auto;
+  padding: 0.55rem 1rem;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+nav ul::-webkit-scrollbar {
+  display: none;
+}
+
+nav a {
+  display: block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+nav a:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Trump order ---------- */
+
+.ranks {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0.8rem 0 0.35rem;
+  padding: 1.1rem 0.9rem;
+  border-radius: 18px;
+  background: var(--felt);
+}
+
+.ranks .card {
+  --w: 52px;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Overlap the 13 cards just enough to fit the width. */
+.ranks .card + .card {
+  margin-left: min(-16px, calc((100% - var(--w)) / 12 - var(--w)));
+}
+
+.rankscale {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* ---------- Numbered steps ---------- */
+
+ol.steps {
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+ol.steps li {
+  position: relative;
+  padding: 0 0 1.1rem;
+  padding-inline-start: 3.2rem;
+  counter-increment: step;
+}
+
+/* Numbered circle */
+ol.steps li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: -0.1rem;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  background: var(--felt);
+  color: var(--felt-text);
+  font-family: var(--font-cards);
+  font-size: 1.05rem;
+}
+
+/* Line connecting the circles */
+ol.steps li::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 1.13rem;
+  top: 2.4rem;
+  bottom: 0.2rem;
+  width: 2px;
+  background: var(--line);
+}
+
+ol.steps li:last-child::after {
+  display: none;
+}
+
+ol.steps p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+}
+
+/* ---------- A trick: can you follow suit? ---------- */
+
+.decide {
+  margin: 1rem 0;
+  padding: 1.2rem 1rem;
+  border-radius: 20px;
+  background: var(--felt);
+  color: var(--felt-text);
+}
+
+.dq {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  font-size: 1.2rem;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.dqs {
+  margin: 0 0 1rem;
+  color: var(--felt-soft);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.branches {
+  display: grid;
+  gap: 0.8rem;
+}
+
+@media (min-width: 34rem) {
+  .branches {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.br {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--card-ink);
+}
+
+.bh {
+  margin-bottom: 0.35rem;
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  font-size: 1.15rem;
+}
+
+.yes-br .bh {
+  color: #1f7a4d;
+}
+
+.no-br .bh {
+  color: var(--card-red);
+}
+
+.br ol {
+  margin: 0;
+  padding: 0;
+  padding-inline-start: 1.2rem;
+}
+
+.br li {
+  margin: 0.35rem 0;
+  line-height: 1.45;
+}
+
+.br .bp {
+  margin: 0.35rem 0 0;
+  line-height: 1.45;
+}
+
+.dnext {
+  margin: 1rem 0 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ---------- Cards with a description (extra points, solos) ---------- */
+
+.specials {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1rem 0;
+}
+
+.sp {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.9rem;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+
+.sp p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Four of a kind */
+.four {
+  display: flex;
+}
+
+.four .card:not(:last-child) {
+  margin-right: -22px;
+}
+
+/* ---------- Practice quiz ---------- */
+
+.trainer {
+  margin: 1rem 0;
+  padding: 1.3rem 1rem 1.2rem;
+  border-radius: 20px;
+  background: var(--felt);
+  color: var(--felt-text);
+  text-align: center;
+}
+
+.trainer .duel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.4rem;
+  margin: 0.6rem 0 1rem;
+}
+
+.trainer .lbl {
+  margin-top: 0.45rem;
+  color: var(--felt-soft);
+  font-size: 0.85rem;
+}
+
+.trainer .q {
+  margin: 0 0 0.8rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.btns {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.btns button,
+.next {
+  min-width: 7rem;
+  padding: 0.95rem 1.6rem;
+  border: 0;
+  border-radius: 999px;
+  font: 700 1.1rem/1 var(--font-body);
+  cursor: pointer;
+}
+
+.yes {
+  background: var(--paper);
+  color: var(--card-ink);
+}
+
+.no {
+  background: var(--red);
+  color: #fff;
+}
+
+.next {
+  margin-top: 0.8rem;
+  background: var(--gold);
+  color: var(--card-ink);
+}
+
+.fb {
+  max-width: 26rem;
+  min-height: 3.2rem;
+  margin: 0.9rem auto 0;
+  font-size: 1rem;
+}
+
+.fb .ok {
+  color: #8ef0bc;
+  font-weight: 700;
+}
+
+.fb .ko {
+  color: #ffb4ac;
+  font-weight: 700;
+}
+
+.score {
+  margin-top: 0.4rem;
+  color: var(--felt-soft);
+  font-size: 0.9rem;
+}
+
+/* ---------- House rules and strategies ---------- */
+
+.strats {
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strats li {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.strats li:last-child {
+  border-bottom: 0;
+}
+
+.strats p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+}
+
+/* ---------- Cheat sheet ---------- */
+
+.cheat {
+  margin: 1rem 0 0;
+  padding: 1.4rem 1.2rem;
+  border-radius: 20px;
+  background: var(--ink);
+  color: var(--page);
+}
+
+.cheat h2 {
+  color: var(--page);
+}
+
+.cheat dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+
+.cheat dt {
+  color: var(--cheat-dt);
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+}
+
+.cheat dd {
+  margin: 0;
+}
+
+/* ---------- Share ---------- */
+
+.sharebox {
+  padding: 1.5rem 1.2rem;
+  border-radius: 20px;
+  background: var(--felt);
+  color: var(--felt-text);
+  text-align: center;
+}
+
+.sharebox h2 {
+  color: var(--felt-text);
+}
+
+.shlead {
+  max-width: 26rem;
+  margin: 0 auto 1.2rem;
+  color: var(--felt-soft);
+}
+
+.qr {
+  width: min(240px, 72vw);
+  margin: 0 auto 0.9rem;
+  padding: 10px;
+  border-radius: 16px;
+  background: #fff;
+  line-height: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.qr:empty {
+  display: none;
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.shurl {
+  max-width: 22rem;
+  margin: 0 auto 1.1rem;
+  color: var(--felt-soft);
+  font-size: 0.88rem;
+  word-break: break-all;
+  direction: ltr;
+}
+
+.shurl a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shbtns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.shbtn {
+  padding: 0.9rem 1.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--felt-text);
+  font: 700 1.05rem/1 var(--font-body);
+  cursor: pointer;
+}
+
+.shbtn.primary {
+  background: var(--gold);
+  color: var(--card-ink);
+}
+
+/* ---------- Footer ---------- */
+
+footer {
+  padding: 2rem 0 3rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+
+/* ---------- Setup: the deck ---------- */
+
+.deck {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.8rem 0 1rem;
+  padding: 1rem 0.8rem;
+  border-radius: 18px;
+  background: var(--felt);
+}
+
+.deckrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.deckrow .row {
+  gap: 0;
+}
+
+.deck .card,
+.plain .card {
+  --w: 40px;
+  box-shadow: -2px 0 3px rgba(0, 0, 0, 0.15), 0 3px 8px rgba(0, 0, 0, 0.22);
+}
+
+.deck .card + .card {
+  margin-left: -8px;
+}
+
+.times {
+  color: var(--gold);
+  font-family: var(--font-cards);
+  font-size: 1.1rem;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* ---------- Teams: Re vs Kontra ---------- */
+
+.teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1rem 0 1.2rem;
+}
+
+.team {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 1rem 0.6rem;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.team .row {
+  gap: 0;
+  margin-bottom: 0.7rem;
+}
+
+.team .card + .card {
+  margin-left: -18px;
+  transform: rotate(8deg);
+}
+
+.team.re {
+  background: var(--felt);
+  color: var(--felt-text);
+}
+
+.team.kontra {
+  border: 2px solid var(--line);
+}
+
+.team b {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  font-size: 1.3rem;
+}
+
+.team.re b {
+  color: var(--gold);
+}
+
+.team small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.team.re small {
+  color: var(--felt-soft);
+}
+
+.vs {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* ---------- Trumps: callout and plain suits ---------- */
+
+.warn {
+  padding: 0.9rem 1rem;
+  border-inline-start: 4px solid var(--red);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 9%, transparent);
+}
+
+.plain {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+.prow {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+
+.prow .row {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.prow .card + .card {
+  margin-left: -6px;
+}
+
+.prow span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.prow b {
+  display: block;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+/* ---------- A trick on the table ---------- */
+
+.trick {
+  margin: 1.2rem 0;
+}
+
+.trick .row {
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.play small {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-shadow: var(--wood-text-shadow);
+}
+
+/* ---------- Card points ---------- */
+
+.values {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 3.6rem));
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+
+.value .card.xs {
+  --w: min(44px, 12vw);
+}
+
+.value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.value b {
+  font-family: var(--font-cards);
+  font-size: 1.25rem;
+}
+
+/* ---------- Calls and scoring tables ---------- */
+
+table.ladder,
+table.points {
+  width: 100%;
+  margin: 1rem 0 1.2rem;
+  border-collapse: collapse;
+}
+
+.ladder th,
+.ladder td,
+.points td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  text-align: start;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.ladder thead th {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ladder tbody th {
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  white-space: nowrap;
+}
+
+.ladder .num {
+  white-space: nowrap;
+}
+
+.points td.num {
+  width: 3rem;
+  color: var(--felt);
+  font-family: var(--font-cards);
+  font-size: 1.1rem;
+  white-space: nowrap;
+}
+
+.points caption {
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  text-align: start;
+}
+
+.points tfoot td {
+  border-bottom: 0;
+  border-top: 2px solid var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  .points td.num {
+    color: var(--gold);
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "doppelkopf",
+  "private": true,
+  "description": "Doppelkopf in 5 minutes – rules page in English and German",
+  "type": "module",
+  "scripts": {
+    "build": "npm run check && eleventy",
+    "start": "eleventy --serve",
+    "test": "playwright test",
+    "check": "node scripts/check-i18n.js"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "3.1.7",
+    "@fontsource/archivo-black": "5.3.0",
+    "@fontsource/atkinson-hyperlegible": "5.3.0",
+    "@playwright/test": "1.63.0",
+    "qrcode-generator": "1.4.4"
+  }
+}
