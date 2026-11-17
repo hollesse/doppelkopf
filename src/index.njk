@@ -42,6 +42,7 @@ scripts: ["/assets/rules.js"]
     <li><a href="#stich">{{ t.nTrick }}</a></li>
     <li><a href="#augen">{{ t.nCount }}</a></li>
     <li class="js-only"><a href="#ueben">{{ t.nPractice }}</a></li>
+    <li><a href="{{ lang.path }}play/">{{ t.game.ctaBtn }}</a></li>
     <li><a href="#ansagen">{{ t.nCalls }}</a></li>
     <li><a href="#abrechnung">{{ t.nScore }}</a></li>
     <li><a href="#sonderspiele">{{ t.nSolo }}</a></li>
@@ -181,6 +182,14 @@ scripts: ["/assets/rules.js"]
     </div>
     <script type="application/json" id="quiz-text">{{ t.quiz | dump | safe }}</script>
     <script type="application/json" id="quiz-ranks">{{ t.ranks | dump | safe }}</script>
+  </section>
+
+  <section id="gegen-bots">
+    <div class="cta">
+      <h2>{{ t.game.ctaH }}</h2>
+      <p>{{ t.game.ctaP }}</p>
+      <a class="ctabtn" href="{{ lang.path }}play/">{{ t.game.ctaBtn }} →</a>
+    </div>
   </section>
 
   <section id="ansagen">

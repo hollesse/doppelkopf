@@ -1171,3 +1171,26 @@ table.points {
     color: var(--gold);
   }
 }
+
+/* ---------- Play against bots: call to action ---------- */
+
+.cta {
+  padding: 1.4rem 1.2rem;
+  border: 2px solid var(--gold);
+  border-radius: 20px;
+  text-align: center;
+}
+
+.cta p {
+  color: var(--muted);
+}
+
+.ctabtn {
+  display: inline-block;
+  padding: 0.95rem 1.6rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--card-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
