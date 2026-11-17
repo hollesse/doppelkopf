@@ -324,6 +324,55 @@ export const BUDGET = { rollouts: 160, minWorlds: 8, maxWorlds: 30 };
  */
 export const OVERRULE = { margin: 0.1, sigmas: 2 };
 
+/**
+ * Moves that are (almost) always mistakes, judged only by what `p` knows: a Dulle or queen
+ * or too few points into a trick the partner surely has, an ace or ten into an opponent's
+ * trick, the fox into a trick that isn't surely ours, leading the fox while a higher trump
+ * is out, a second round of hearts when a fresh suit is there. "strong" never chooses such
+ * a card over the conventions: its look-ahead plays the rest of the game knowing the
+ * imagined cards, which makes some of these look better than they are at a real table.
+ * (scripts/audit.mjs counts the same patterns.)
+ */
+export function dubious(state, p, card, legal) {
+  const contract = state.contract;
+  const high = (c) => E.trumpRank(contract, c) >= 0 && E.trumpRank(contract, c) <= 4;
+  if (!legal.some((c) => E.key(c) !== E.key(card))) return false;
+  const trick = state.trick;
+  if (!trick.length) {
+    if (isFox(card) && E.isTrump(contract, card)) {
+      const higherOut = unseenCards(state, p).some((c) => E.beats(contract, c, card, "T"));
+      if (higherOut) return true;
+    }
+    const ledBefore = (g) => state.tricks.some((t) => E.group(contract, t.cards[0].card) === g);
+    const fresh = legal.some((c) => !E.isTrump(contract, c) && !ledBefore(c.suit));
+    return E.group(contract, card) === "♥" && ledBefore("♥") && fresh;
+  }
+  const side = E.party(state, p);
+  const known = E.knownParties(state, p);
+  const led = E.group(contract, trick[0].card);
+  const best = trick[E.winningIndex(contract, trick)];
+  const last = trick.length === E.PLAYERS - 1;
+  const partner = side && best.player !== p && known[best.player] === side;
+  const opponent = side && known[best.player] && known[best.player] !== side;
+  const wins = (c) => E.beats(contract, c, best.card, led);
+  if (last && partner) {
+    const lower = legal.filter((c) => !high(c));
+    if (high(card) && lower.length) return true;
+    const most = Math.max(...(lower.length ? lower : legal).map((c) => E.POINTS[c.rank]));
+    if (most - E.POINTS[card.rank] >= 7) return true;
+  }
+  if (last && opponent && !wins(card) && E.POINTS[card.rank] >= 10 && legal.some((c) => E.POINTS[c.rank] <= 4)) return true;
+  // The fox only into a trick a known partner holds, or one we take for sure: not into
+  // someone else's trick hoping the partner takes it after us, and not to win while someone
+  // who isn't surely our partner still plays after us.
+  if (isFox(card) && legal.some((c) => !isFox(c) && !high(c))) {
+    if (!wins(card) && !partner) return true;
+    const after = SIDES.map((i) => (p + i) % 4).slice(1, 4 - trick.length);
+    if (wins(card) && after.some((q) => !(side && known[q] === side))) return true;
+  }
+  return false;
+}
+
 function search(state, p, legal, random) {
   // Both copies of a card are worth the same: try each kind once.
   const kinds = [...new Map(legal.map((card) => [E.key(card), card])).values()];
@@ -349,7 +398,7 @@ function search(state, p, legal, random) {
   let best = null;
   let bestGain = 0;
   kinds.forEach((card, k) => {
-    if (k === base) return;
+    if (k === base || dubious(state, p, card, legal)) return;
     const diffs = values[k].map((v, w) => v - values[base][w]);
     const mean = diffs.reduce((a, b) => a + b, 0) / n;
     const sd = Math.sqrt(diffs.reduce((a, d) => a + (d - mean) ** 2, 0) / (n - 1));

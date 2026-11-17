@@ -2,7 +2,7 @@
 // rules page, so a human can read their cards? Tested without a browser.
 import { test, expect } from "@playwright/test";
 import * as E from "../src/assets/game/engine.js";
-import { beliefs, chooseCall, chooseCard, sampleWorld } from "../src/assets/game/bots.js";
+import { beliefs, chooseCall, chooseCard, dubious, sampleWorld } from "../src/assets/game/bots.js";
 
 const seeded = (seed) => () => {
   seed = (seed + 0x6d2b79f5) | 0;
@@ -183,6 +183,22 @@ test.describe("what a bot believes", () => {
       const k = cardOf(state, 3, chooseCard(state, 3, "strong", seeded(i)));
       expect(k, `run ${i}`).not.toMatch(/^Q/);
     }
+  });
+
+  test("moves strong never prefers over the conventions", () => {
+    const state = game(DEAL);
+    play(state, "A♣");
+    play(state, "9♥");
+    const card = (p, k) => state.players[p].hand.find((c) => E.key(c) === k);
+    const legal = (p) => E.legalCards(state, p);
+    // Seat 2 (Re) doesn't know yet that seat 3 is its partner: trumping with the fox
+    // could be overtrumped by seat 3. A jack is fine.
+    expect(dubious(state, 2, card(2, "A♦"), legal(2))).toBe(true);
+    expect(dubious(state, 2, card(2, "J♦"), legal(2))).toBe(false);
+    play(state, "Q♣"); // now seat 2 is known as Re
+    // Seat 3 (Re, last): the fox into the partner's safe trick is right, a queen is a waste.
+    expect(dubious(state, 3, card(3, "A♦"), legal(3))).toBe(false);
+    expect(dubious(state, 3, card(3, "Q♠"), legal(3))).toBe(true);
   });
 
   test("strong looks ahead and still only plays allowed cards", () => {
