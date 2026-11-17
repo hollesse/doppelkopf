@@ -241,11 +241,11 @@ test("looking at the last trick", async ({ page }) => {
   await openPlay(page, byCode.de);
   await start(page);
   const button = page.locator("#btn-last");
-  if ((await waitForMe(page)) === "reserve") await page.locator('[data-declare="healthy"]').click();
-  await waitForMe(page);
-  // You lead the first game, so no trick is finished yet: nothing to look at.
-  await expect(page.locator(".tslot .card")).toHaveCount(0);
+  // Before the first card (the reservation round) there is nothing to look at.
+  expect(await waitForMe(page)).toBe("reserve");
   await expect(button).toBeHidden();
+  await page.locator('[data-declare="healthy"]').click();
+  await waitForMe(page);
   // Play until a trick is finished and a new one has started.
   for (let i = 0; i < 3; i++) {
     await playFirstCard(page);
