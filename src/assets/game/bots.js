@@ -176,11 +176,16 @@ function view(state, p) {
 }
 
 /** Could one of `players` (still to play) beat `card` in a trick led with `led`? */
+/** A plain suit with at most 6 cards in the deck (hearts in a normal game). */
+const shortSuit = (state, suit) => deckOf(state).filter((c) => c.suit === suit && !E.isTrump(state.contract, c)).length <= 6;
+
 function canBeBeaten(state, v, card, led, players) {
   const higher = v.unseen.filter((c) => E.beats(v.contract, c, card, led));
   if (!higher.length) return false;
   return players.some((q) => {
-    const voidLed = v.empty[q].has(led) || (led !== "T" && (v.rounds[led] ?? 0) >= 1);
+    // Out of the suit for sure, or likely: after a first round, or in a short suit like
+    // hearts in a normal game (only 6 plain cards), where someone is often blank already.
+    const voidLed = v.empty[q].has(led) || (led !== "T" && ((v.rounds[led] ?? 0) >= 1 || shortSuit(state, led)));
     // Following suit with a higher card, or trumping in when out of the suit.
     if (!voidLed) return higher.some((c) => E.group(v.contract, c) === led);
     return !v.empty[q].has("T") && higher.some((c) => E.isTrump(v.contract, c));
@@ -220,13 +225,18 @@ function lead(state, p, legal, v) {
     return [...pool].sort((a, b) => suitLength(a.suit) - suitLength(b.suit) || byCheapest(contract)(a, b))[0];
   };
 
-  if (soloist) return trumps.length ? (boss.length ? cheapest(contract, boss) : lowTrump()) : lowPlain();
+  if (soloist) {
+    if (boss.length) return cheapest(contract, boss);
+    // Pull trumps with small ones; if only the fox is left, rather a plain card.
+    return notFox(trumps).length || !plain.length ? lowTrump() : lowPlain();
+  }
   if (againstSolo) return plain.length ? lowPlain() : lowTrump();
 
   // Re leads trumps (the partner's queen of clubs can take it), Kontra leads plain suits.
   // If the partner announced Kontra, they have strength in trumps: lead a trump for them.
   const partnerCalled = state.callLog.some((c) => v.partner(c.player));
-  if (trumps.length && (v.side === "re" || partnerCalled || !plain.length)) {
+  // (Never lead the fox for this, if anything else is possible.)
+  if (notFox(trumps).length && (v.side === "re" || partnerCalled || !plain.length)) {
     if (boss.length && trumps.length >= 4) return cheapest(contract, boss);
     return lowTrump();
   }
@@ -247,8 +257,11 @@ function follow(state, p, legal, v) {
   const partnerBest = v.partner(best.player);
   const partnerSafe = partnerBest && !canBeBeaten(state, v, best.card, led, opponentsAfter);
 
-  // 1. The partner has the trick for sure: load it up, the fox first.
-  if (partnerSafe) return schmier(contract, legal);
+  // 1. The partner has the trick for sure: load it up, the fox first. Only for a partner we
+  //    know for sure (a played queen of clubs, a call, counting) – a partner guessed from
+  //    the leads may be an opponent, and then the fox and the aces are gone.
+  if (partnerSafe && E.knownParties(state, p)[best.player] === v.side) return schmier(contract, legal);
+  if (partnerSafe) return discard(contract, legal);
 
   // 2. Show the queen of clubs (Re) as soon as it takes a trick: the partner then knows.
   if (contract === "normal" && v.side === "re" && !state.revealed[p]) {
@@ -259,14 +272,15 @@ function follow(state, p, legal, v) {
   // 3. Take the trick if it is worth it and nobody after us can take it back.
   if (!partnerBest && sureWinners.length) {
     const worth = points + Math.max(...sureWinners.map((c) => E.POINTS[c.rank]));
-    const cheap = cheapest(contract, sureWinners);
+    // The fox only when nobody can come after us: otherwise it's not as safe as it looks.
+    const cheap = cheapest(contract, after.length ? withoutFox(sureWinners) : sureWinners);
     if (worth >= 10 || strength(contract, cheap) < 92 || after.length === 0) return cheap;
   }
 
   // 4. An opponent leads a plain suit we can't follow: trump in high enough (at least a jack)
   //    while someone can still overtrump with the fox or a lower trump.
   if (!partnerBest && led !== "T" && winners.length && winners.every((c) => E.isTrump(contract, c))) {
-    const jackOrBetter = winners.filter((c) => E.trumpRank(contract, c) <= 8 && E.trumpRank(contract, c) >= 0);
+    const jackOrBetter = winners.filter((c) => E.trumpRank(contract, c) <= 8 && E.trumpRank(contract, c) >= 0); // never the fox
     if (opponentsAfter.length && jackOrBetter.length && points >= 10) return cheapest(contract, jackOrBetter);
     if (!opponentsAfter.length && (points >= 4 || winners.some((c) => strength(contract, c) < 92))) return cheapest(contract, winners);
   }
@@ -278,6 +292,9 @@ function follow(state, p, legal, v) {
   // 7. Otherwise: give as little as possible, keep the fox and strong cards.
   return discard(contract, legal);
 }
+
+/** The cards without the fox, unless that leaves nothing. */
+const withoutFox = (cards) => (cards.some((c) => !isFox(c)) ? cards.filter((c) => !isFox(c)) : cards);
 
 /** Load up the partner's trick: fox, aces, tens, then other points – but keep the high trumps. */
 function schmier(contract, legal) {
