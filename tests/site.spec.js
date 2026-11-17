@@ -283,6 +283,11 @@ test.describe("offline", () => {
     // The quiz still works.
     await page.locator("#btns .yes").click();
     await expect(page.locator("#fb span")).toBeVisible();
+
+    // The game page works offline too.
+    await page.goto("de/play/");
+    await page.locator("#setup-form button[type=submit]").click();
+    await expect(page.locator("#my-hand button")).toHaveCount(12);
   });
 
   test("the start page redirects offline too", async ({ browser, baseURL }) => {

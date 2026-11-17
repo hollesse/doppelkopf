@@ -16,7 +16,8 @@ export default defineConfig({
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    // The engine tests need no browser, so they run only once.
+    { name: "mobile", use: { ...devices["Pixel 7"] }, testIgnore: /engine\.spec/ },
   ],
   // Tests run against the built site (npm run build), served like GitHub Pages.
   webServer: {

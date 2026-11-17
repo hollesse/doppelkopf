@@ -12,6 +12,8 @@ Aufbau (48 Karten, Austeilen) · Teams (Re und Kontra) · Trumpf und Fehl · Ein
 Augen zählen · Quiz „Sticht das?“ · Ansagen (Re/Kontra, keine 90 … schwarz) · Abrechnung mit Sonderpunkten
 (Fuchs, Karlchen, Doppelkopf) und Beispiel · Hochzeit und Soli · Hausregeln · Strategien · Spickzettel · Teilen.
 
+Dazu eine Spielseite (`/play/`, `/de/play/`): Doppelkopf gegen drei Bots, direkt im Browser, auch offline.
+
 Grundlage sind die Turnierspielregeln des Deutschen Doppelkopf-Verbands, vereinfacht. Verbreitete
 Abweichungen stehen im Abschnitt „Hausregeln“.
 
@@ -32,23 +34,53 @@ Beim ersten Mal ggf. den Browser installieren: `npx playwright install chromium`
 | Pfad | Inhalt |
 | --- | --- |
 | `src/index.njk` | Regelseite, wird einmal pro Sprache gerendert |
+| `src/play.njk` | Spielseite gegen Bots (`/play/`, `/de/play/`) |
 | `src/_includes/layouts/base.njk` | Gemeinsamer Rahmen: Kopf, `hreflang`, Skripte |
 | `src/_includes/langmenu.njk` | Sprachmenü, verlinkt auf dieselbe Seite in jeder Sprache |
 | `src/_includes/card.njk` | Makros für die Spielkarten-Grafiken |
 | `src/_includes/redirect.njk` | Nur Startseite: leitet auf die gemerkte bzw. Browsersprache weiter |
 | `src/_data/languages.js` | Liste der Sprachen (Reihenfolge im Menü, Flagge, Fallback-Kette) |
-| `src/_data/i18n/*.json` | Texte pro Sprache, inklusive Quiztexte unter `quiz` und Kartenbuchstaben unter `ranks` |
+| `src/_data/i18n/*.json` | Texte pro Sprache: Quiz unter `quiz`, Spielseite unter `game`, Kartenbuchstaben unter `ranks` |
 | `src/_data/site.js` | Öffentliche URL und Pfad-Präfix |
 | `src/_data/fonts.js` | Welche Schriften, Schnitte und Zeichensätze ausgeliefert werden |
 | `src/fonts.11ty.js` | Erzeugt `/assets/fonts.css` aus den `@fontsource`-Paketen |
 | `src/assets/` | Stylesheet, JavaScript und Icons, werden unverändert kopiert |
 | `src/assets/site.js` | Auf jeder Seite: Sprachmenü, Service Worker |
 | `src/assets/rules.js` | Quiz, QR-Code, Teilen |
+| `src/assets/game/` | Spiel: `engine.js` (Regeln), `bots.js` (Computergegner), `ui.js` (Oberfläche), `fx.js` (Animationen), `game.css` |
 | `src/sw.js` | Service Worker (Vorlage), siehe „Offline“ |
 | `src/manifest.webmanifest` | Web-App-Manifest, macht die Seite installierbar |
 | `scripts/check-i18n.js` | Prüft die Übersetzungen, siehe unten |
 | `tests/site.spec.js` | Playwright-Tests: beide Sprachen, Weiterleitung, ohne JavaScript, Quiz, Teilen, Offline |
+| `tests/play.spec.js` | Spielseite: beide Sprachen, komplette Partien über die Oberfläche, Ansagen, Solo, Layout |
+| `tests/engine.spec.js` | Spielregeln, Abrechnung und Bots ohne Browser, inklusive Tausender simulierter Partien |
 | `tests/serve.js` | Kleiner Server, der `_site/` unter dem Pages-Pfad ausliefert |
+
+## Gegen Bots spielen
+
+Du spielst mit drei Bots, die Spielseite läuft komplett im Browser, ohne Server, auch offline.
+
+- **Regeln** wie auf der Regelseite: 48 Karten mit Neunen, bei zwei gleichen Karten gewinnt die erste
+  (auch bei den Dullen), Ansagen Re/Kontra bis schwarz mit den Fristen von dort, Hochzeit (wer zuerst in
+  den ersten drei Stichen einen Stich holt, wird Partner; sonst allein), stilles Solo, Damen-, Buben-,
+  Farbsoli und Fleischlos, Sonderpunkte im Normalspiel, Soli zählen dreifach. Haben beide Parteien
+  eine Absage nicht geschafft, gewinnt keiner. Hausregeln (Armut, Schweinchen usw.) gibt es nicht.
+- `engine.js` enthält nur die Regeln, ohne Oberfläche, und lässt sich so in Node testen und simulieren.
+  `knownParties()` liefert, was ein Spieler über die Parteien wissen kann (eigene Karten, gespielte
+  Kreuz-Damen, Ansagen, Abzählen). Danach richten sich die Bots und die Re/Kontra-Abzeichen am Tisch.
+- `bots.js`: **Leicht** legt eine zufällige erlaubte Karte und sagt nie etwas an. **Normal** spielt die
+  Strategien von der Regelseite: Fehl-Asse beim ersten Durchgang, Stiche des Partners schmieren, Stiche
+  mit Punkten möglichst billig holen, den Fuchs schützen, mit starker Hand Re/Kontra ansagen, mit sehr
+  starker Hand ein Solo. In der Simulation holen normale Bots gegen leichte knapp einen Punkt pro Spiel mehr.
+- **Ablauf:** Vor jedem Spiel fragt die Seite „Gesund oder Vorbehalt?“. Karte antippen und nochmal
+  antippen (oder „Legen“) spielt sie; nicht erlaubte Karten sind abgedunkelt und erklären beim Antippen,
+  was zu bedienen ist. Der Ansage-Knopf erscheint, solange deine nächste Ansage erlaubt ist.
+- **Spielstand:** Nach jedem Spiel zeigt die Seite Augen, die einzelnen Spielpunkte und den laufenden
+  Stand aller vier Spieler. Die Statistik (Spiele, Siege, Punkte pro Schwierigkeit) steht nur im
+  `localStorage` des Geräts (`game-stats`).
+- **Layout** wie bei Shithead: Während einer Partie füllt der Tisch genau einen Bildschirm, alle Bereiche
+  haben feste Höhen, die Kartengröße richtet sich nach der Bildschirmhöhe. Ein Test prüft auf
+  320 × 568 und einem Tablet, dass sich zwischen den Zügen nichts verschiebt.
 
 ## Kartenbuchstaben
 

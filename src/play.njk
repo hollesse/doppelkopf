@@ -1,0 +1,121 @@
+---
+pagination:
+  data: languages
+  size: 1
+  alias: lang
+permalink: "{{ lang.path }}play/"
+layout: layouts/base.njk
+subpath: "play/"
+eleventyComputed:
+  pageTitle: "{{ lang.t.game.title }}"
+  pageDescription: "{{ lang.t.game.sub | striptags }}"
+styles: ["/assets/game/game.css"]
+scripts: ["/assets/game/ui.js"]
+---
+{%- set t = lang.t -%}
+{%- set g = lang.t.game -%}
+
+<header class="hero hero-small">
+  <div class="wrap">
+    {% include "langmenu.njk" %}
+    <p class="backlink"><a href="{{ lang.path }}">← {{ g.back }}</a></p>
+    <h1>{{ g.h1 }}</h1>
+    <p>{{ g.sub }}</p>
+  </div>
+</header>
+
+<main class="wrap game">
+  <!-- 1. Settings -->
+  <section id="setup" class="js-only gamebox">
+    <h2>{{ g.setupH }}</h2>
+    <form id="setup-form">
+      <label class="namefield">
+        <span>{{ g.yourName }}</span>
+        <input type="text" name="player" maxlength="20" autocomplete="given-name" placeholder="{{ g.you }}">
+      </label>
+      <fieldset>
+        <legend>{{ g.level }}</legend>
+        <div class="choices">
+          <label><input type="radio" name="level" value="easy"><span>{{ g.easy }}</span></label>
+          <label><input type="radio" name="level" value="normal" checked><span>{{ g.normal }}</span></label>
+        </div>
+      </fieldset>
+      <button type="submit" class="bigbtn">{{ g.start }}</button>
+    </form>
+    <div class="statsbox" data-stats></div>
+  </section>
+
+  <!-- 2. The table: fills exactly one screen, every area has a fixed size -->
+  <section id="table" class="js-only table" hidden>
+    <div class="topbar">
+      <a href="{{ lang.path }}">← {{ g.back }}</a>
+      <span id="contract" class="contract"></span>
+      <span id="total" class="total"></span>
+    </div>
+
+    <!-- Left, across, right: in playing order after you -->
+    <div id="opponents" class="opponents"></div>
+
+    <div class="trickarea" id="trickarea" role="group" aria-label="{{ g.trick }}">
+      {%- for seat in [0, 1, 2, 3] %}
+      <div class="tslot" data-seat="{{ seat }}"></div>
+      {%- endfor %}
+    </div>
+
+    <div class="status" aria-live="polite">
+      <p id="status"></p>
+      <ol id="log" class="log"></ol>
+    </div>
+
+    <div class="me" id="me">
+      <div class="mehead"><span id="me-name" class="oppname"></span><span id="me-info" class="info"></span></div>
+      <div id="my-hand" class="myhand" role="group" aria-label="{{ g.yourHand }}"></div>
+    </div>
+
+    <!-- Before the first card: healthy or a reservation -->
+    <div id="reserve" class="reserve" role="dialog" aria-labelledby="reserve-h" hidden>
+      <h2 id="reserve-h">{{ g.reserveH }}</h2>
+      <p id="reserve-p" class="reservep"></p>
+      <div class="reservebtns">
+        <button type="button" class="bigbtn" data-declare="healthy">{{ g.healthy }}</button>
+        <button type="button" class="bigbtn secondary" data-declare="wedding">{{ g.wedding }}</button>
+      </div>
+      <details class="solos">
+        <summary>{{ g.soloMore }}</summary>
+        <div class="solobtns">
+          {%- for solo in ["queens", "jacks", "clubs", "spades", "hearts", "diamonds", "none"] %}
+          <button type="button" class="solobtn" data-declare="{{ solo }}"><b>{{ g.contracts[solo] }}</b><small>{{ g.soloHelp[solo] }}</small></button>
+          {%- endfor %}
+        </div>
+      </details>
+    </div>
+
+    <div class="controls">
+      <button type="button" id="btn-play" class="bigbtn">{{ g.play }}</button>
+      <button type="button" id="btn-call" class="bigbtn secondary"></button>
+    </div>
+  </section>
+
+  <!-- 3. A game is over, on top of the table -->
+  <section id="over" class="js-only overlay" hidden>
+    <div class="gamebox overbox" role="dialog" aria-modal="true" aria-labelledby="over-h">
+      <h2 id="over-h"></h2>
+      <p id="over-text" class="overtext"></p>
+      <div id="over-points" class="overpoints"></div>
+      <h3>{{ g.gamePointsH }}</h3>
+      <table id="over-lines" class="lines"></table>
+      <h3>{{ g.standingsH }}</h3>
+      <table id="standings" class="stats standings"></table>
+      <div class="overbtns">
+        <button type="button" id="btn-next" class="bigbtn">{{ g.next }}</button>
+        <button type="button" id="btn-settings" class="bigbtn secondary">{{ g.settings }}</button>
+      </div>
+      <div class="statsbox" data-stats></div>
+    </div>
+  </section>
+
+  <script type="application/json" id="game-text">{{ g | dump | safe }}</script>
+  <script type="application/json" id="rank-letters">{{ t.ranks | dump | safe }}</script>
+</main>
+
+<footer>{{ t.foot | safe }}</footer>
