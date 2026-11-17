@@ -12,7 +12,11 @@ Aufbau (48 Karten, Austeilen) · Teams (Re und Kontra) · Trumpf und Fehl · Ein
 Augen zählen · Quiz „Sticht das?“ · Ansagen (Re/Kontra, keine 90 … schwarz) · Abrechnung mit Sonderpunkten
 (Fuchs, Karlchen, Doppelkopf) und Beispiel · Hochzeit und Soli · Hausregeln · Strategien · Spickzettel · Teilen.
 
-Dazu eine Spielseite (`/play/`, `/de/play/`): Doppelkopf gegen drei Bots, direkt im Browser, auch offline.
+Die Regeln gibt es in zwei Varianten: mit Neunen (48 Karten, `/`, `/de/`) und ohne Neunen (40 Karten,
+`/ohne-neunen/`, `/de/ohne-neunen/`); ein Umschalter oben auf der Seite wechselt zwischen beiden.
+
+Dazu eine Spielseite (`/play/`, `/de/play/`): Doppelkopf gegen drei Bots, direkt im Browser, auch offline,
+wahlweise mit oder ohne Neunen.
 
 Grundlage sind die Turnierspielregeln des Deutschen Doppelkopf-Verbands, vereinfacht. Verbreitete
 Abweichungen stehen im Abschnitt „Hausregeln“.
@@ -33,14 +37,16 @@ Beim ersten Mal ggf. den Browser installieren: `npx playwright install chromium`
 
 | Pfad | Inhalt |
 | --- | --- |
-| `src/index.njk` | Regelseite, wird einmal pro Sprache gerendert |
+| `src/_includes/rules.njk` | Die Regelseite selbst, für beide Varianten |
+| `src/index.njk` | Regeln mit Neunen, einmal pro Sprache |
+| `src/ohne-neunen.njk` | Regeln ohne Neunen (`/ohne-neunen/`, `/de/ohne-neunen/`) |
 | `src/play.njk` | Spielseite gegen Bots (`/play/`, `/de/play/`) |
 | `src/_includes/layouts/base.njk` | Gemeinsamer Rahmen: Kopf, `hreflang`, Skripte |
 | `src/_includes/langmenu.njk` | Sprachmenü, verlinkt auf dieselbe Seite in jeder Sprache |
 | `src/_includes/card.njk` | Makros für die Spielkarten-Grafiken |
 | `src/_includes/redirect.njk` | Nur Startseite: leitet auf die gemerkte bzw. Browsersprache weiter |
 | `src/_data/languages.js` | Liste der Sprachen (Reihenfolge im Menü, Flagge, Fallback-Kette) |
-| `src/_data/i18n/*.json` | Texte pro Sprache: Quiz unter `quiz`, Spielseite unter `game`, Kartenbuchstaben unter `ranks` |
+| `src/_data/i18n/*.json` | Texte pro Sprache: Quiz unter `quiz`, Spielseite unter `game`, Kartenbuchstaben unter `ranks`, abweichende Texte ohne Neunen unter `noNines` |
 | `src/_data/site.js` | Öffentliche URL und Pfad-Präfix |
 | `src/_data/fonts.js` | Welche Schriften, Schnitte und Zeichensätze ausgeliefert werden |
 | `src/fonts.11ty.js` | Erzeugt `/assets/fonts.css` aus den `@fontsource`-Paketen |
@@ -100,6 +106,18 @@ Du spielst mit drei Bots, die Spielseite läuft komplett im Browser, ohne Server
 - **Layout** wie bei Shithead: Während einer Partie füllt der Tisch genau einen Bildschirm, alle Bereiche
   haben feste Höhen, die Kartengröße richtet sich nach der Bildschirmhöhe. Ein Test prüft auf
   320 × 568 und einem Tablet, dass sich zwischen den Zügen nichts verschiebt.
+
+## Ohne Neunen
+
+- **Regeln:** `ohne-neunen.njk` rendert dieselbe Seite (`_includes/rules.njk`) mit `nines = false`. Die
+  Kartenbilder lassen dann die Neunen weg, die Texte kommen aus `noNines` in der i18n-Datei: Dort stehen
+  nur die Texte, die sich ändern (40 Karten, 10 pro Person, 24 Trümpfe, Fehlfarben mit 6 bzw. 4 Karten,
+  Ansagen bis 9 Karten usw.), alles andere kommt aus den normalen Texten. Das Quiz spielt dort ohne Neunen.
+  Der Spiel-Link dort öffnet die Spielseite mit `?nines=0`, also mit „Ohne Neunen“ vorausgewählt.
+- **Spiel:** `createGame({ nines: false })` teilt 40 Karten aus, 10 pro Person; die Ansage-Fristen
+  richten sich nach der Kartenzahl (Re/Kontra bis 9 Karten), die Punktgrenzen bleiben, denn die
+  Neunen zählen 0 Augen. Die Bots verwenden dieselben Schwellen: Ohne Neunen sind es weniger Karten,
+  aber mehr davon Trumpf, und die Ansagen treffen genauso oft (gemessen: ~0,9 pro Spiel, ~78 % gewonnen).
 
 ## Kartenbuchstaben
 

@@ -50,6 +50,43 @@ test.describe("every language page", () => {
   }
 });
 
+test.describe("rules without nines", () => {
+  for (const lang of languages) {
+    test(`${lang.code}: own page, no nines, the numbers for 40 cards`, async ({ page }) => {
+      const path = `${pathOf(lang).replace("./", "")}ohne-neunen/`;
+      await page.addInitScript((code) => localStorage.setItem("lang", code), lang.code);
+      await page.goto(path);
+      const t = lang.tNoNines;
+      await expect(page).toHaveTitle(t.title);
+      await expect(page.locator("link[rel=canonical]")).toHaveAttribute("href", `${lang.url}ohne-neunen/`);
+      await expect(page.locator('.variant a[aria-current="page"]')).toHaveText(lang.t.withoutNines);
+      // Not a single nine on the page, and the texts for 40 cards.
+      expect(await page.locator("main .card .c").allTextContents()).not.toContainEqual(expect.stringMatching(/^9/));
+      await expect(page.locator("#aufbau .lead")).toHaveText(t.setupLead);
+      await expect(page.locator(".ladder tbody tr").first()).toContainText(t.a1u);
+      await expect(page.locator(".values .value")).toHaveCount(5);
+      // Sharing shares this variant, the game link preselects it.
+      await expect(page.locator("#shurl")).toHaveAttribute("href", `${lang.url}ohne-neunen/`);
+      await expect(page.locator("#gegen-bots a")).toHaveAttribute("href", /play\/\?nines=0$/);
+      // The language menu stays on this variant, the switch goes back.
+      await expect(page.locator('.langmenu a[data-lang="de"]')).toHaveAttribute("href", /\/de\/ohne-neunen\/$/);
+      await page.locator(".variant a:not([aria-current])").click();
+      await expect(page.locator("#aufbau .lead")).toHaveText(lang.t.setupLead);
+      await expect(page.locator(".values .value")).toHaveCount(6);
+    });
+  }
+
+  test("the quiz has no nines either", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("lang", "de"));
+    await page.goto("de/ohne-neunen/");
+    for (let i = 0; i < 25; i++) {
+      for (const id of ["#ledCard", "#myCard"]) expect(await page.locator(`${id} .c`).innerText()).not.toMatch(/^9/);
+      await page.locator("#btns .yes").click();
+      await page.locator("#next").click();
+    }
+  });
+});
+
 test.describe("start page redirect", () => {
   const cases = [
     ["de-DE", "de"],

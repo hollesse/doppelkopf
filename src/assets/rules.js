@@ -9,7 +9,9 @@ const text = JSON.parse($("quiz-text").textContent);
 const LETTERS = JSON.parse($("quiz-ranks").textContent); // J/Q/K/A → letters on the cards
 
 const SUITS = ["♣", "♠", "♥", "♦"];
-const RANKS = ["9", "10", "J", "Q", "K", "A"];
+// The page without nines quizzes with the 40 cards that are left.
+const NINES = document.querySelector(".trainer").dataset.nines !== "0";
+const RANKS = ["9", "10", "J", "Q", "K", "A"].filter((rank) => NINES || rank !== "9");
 // Trumps from high to low, as "rank suit".
 const TRUMPS = ["10♥", "Q♣", "Q♠", "Q♥", "Q♦", "J♣", "J♠", "J♥", "J♦", "A♦", "10♦", "K♦", "9♦"];
 // Plain suits from high to low.

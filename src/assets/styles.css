@@ -368,6 +368,29 @@ h3.sub.first {
   font-weight: 700;
 }
 
+/* With or without nines: two links, the current one highlighted */
+.variant {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.hero .variant a {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  color: var(--felt-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hero .variant a[aria-current="page"] {
+  background: var(--gold);
+  color: var(--card-ink);
+}
+
 /* Fanned cards */
 .fan {
   position: relative;
@@ -1089,7 +1112,7 @@ footer {
 
 .values {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 3.6rem));
+  grid-template-columns: repeat(var(--n, 6), minmax(0, 3.6rem));
   justify-content: center;
   gap: 0.4rem;
   margin: 1rem 0;

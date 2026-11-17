@@ -214,6 +214,26 @@ test("playing a solo (en)", async ({ page }) => {
   await expect(page.locator("#over-lines")).not.toContainText(g.lines.fox);
 });
 
+test("a game without nines: 10 cards each (preselected from the rules page)", async ({ page }) => {
+  test.setTimeout(120_000);
+  await seed(page, 6);
+  await page.addInitScript(() => localStorage.setItem("lang", "de"));
+  await page.goto("de/ohne-neunen/");
+  await page.locator("#gegen-bots a").click();
+  await expect(page.locator('input[name=nines][value="0"]')).toBeChecked();
+  await start(page);
+  await expect(page.locator("#my-hand button")).toHaveCount(10);
+  for (const fan of await page.locator("#opponents .oppfan").all()) await expect(fan.locator(".fanback")).toHaveCount(10);
+  await expect(page.locator("#log")).toContainText(byCode.de.t.game.withoutNines);
+  expect(await page.locator("#my-hand button .c").allTextContents()).not.toContainEqual(expect.stringMatching(/^9/));
+  const seen = await playToEnd(page);
+  expect(seen.cards).toBe(10);
+  await checkStandings(page);
+  // The nines are worth nothing, so there are still 240 card points.
+  const points = (await page.locator("#over-points .pts").allTextContents()).map(Number);
+  expect(points[0] + points[1]).toBe(240);
+});
+
 test("the table fits one screen and nothing moves between moves", async ({ browser, baseURL }) => {
   test.setTimeout(60_000);
   for (const viewport of [{ width: 320, height: 568 }, { width: 820, height: 1180 }]) {

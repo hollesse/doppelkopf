@@ -13,7 +13,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 
 const DIR = new URL("../src/_data/i18n/", import.meta.url);
-const TEMPLATE = new URL("../src/index.njk", import.meta.url);
+const TEMPLATE = new URL("../src/_includes/rules.njk", import.meta.url);
 const DEFAULT = "en";
 
 // Only code and fallback are needed from languages.js.

@@ -49,6 +49,29 @@ test.describe("cards", () => {
   });
 });
 
+test.describe("without nines", () => {
+  test("40 cards, 10 each, 24 trumps, still 240 points", () => {
+    const deck = E.createDeck({ nines: false });
+    expect(deck).toHaveLength(40);
+    expect(deck.some((card) => card.rank === "9")).toBe(false);
+    expect(deck.filter((card) => E.isTrump("normal", card))).toHaveLength(24);
+    expect(deck.reduce((sum, card) => sum + E.POINTS[card.rank], 0)).toBe(240);
+    const state = E.createGame({ nines: false });
+    expect(state.players.map((p) => p.hand.length)).toEqual([10, 10, 10, 10]);
+    expect(E.size(state)).toBe(10);
+  });
+
+  test("Re or Kontra while you still have 9 cards", () => {
+    const state = E.createGame({ dealer: 3, nines: false, random: seeded(3) });
+    for (let p = 0; p < 4; p++) E.declare(state, p, "healthy");
+    expect(E.nextCall(state, 1)).toBe(1); // 10 cards
+    for (let i = 0; i < 4; i++) E.play(state, state.turn, E.legalCards(state, state.turn)[0].id);
+    expect(E.nextCall(state, 1)).toBe(1); // 9 cards
+    for (let i = 0; i < 4; i++) E.play(state, state.turn, E.legalCards(state, state.turn)[0].id);
+    expect(E.nextCall(state, 1)).toBe(0); // 8 cards: too late
+  });
+});
+
 test.describe("who wins the trick", () => {
   test("the highest trump", () => {
     expect(winner("normal", "A♠ 10♠ J♦ K♠")).toBe(2); // the example from the rules page
@@ -375,6 +398,27 @@ test.describe("simulated games", () => {
     // Bots call with good hands, but not in every game.
     expect(calls / 3000).toBeGreaterThan(0.2);
     expect(calls / 3000).toBeLessThan(1);
+  });
+
+  test("without nines: 10 tricks, everything adds up", () => {
+    const random = seeded(9);
+    for (let i = 0; i < 1000; i++) {
+      const state = E.createGame({ dealer: i % 4, random, nines: false });
+      while (state.phase === "reserve") E.declare(state, state.turn, chooseDeclaration(state, state.turn, "normal", random));
+      while (state.phase === "play") {
+        const p = state.turn;
+        while (chooseCall(state, p, "normal")) E.call(state, p);
+        E.play(state, p, chooseCard(state, p, "normal", random));
+      }
+      expect(state.tricks).toHaveLength(10);
+      expect(state.result.points.re + state.result.points.kontra).toBe(240);
+      expect(state.result.scores.reduce((a, b) => a + b, 0)).toBe(0);
+    }
+    // And a strong bot, which imagines the hidden cards from the 40-card deck.
+    const state = E.createGame({ dealer: 3, random, nines: false });
+    while (state.phase === "reserve") E.declare(state, state.turn, "healthy");
+    while (state.phase === "play") E.play(state, state.turn, chooseCard(state, state.turn, "strong", random));
+    expect(state.tricks).toHaveLength(10);
   });
 
   test("strong bots too", () => {

@@ -41,5 +41,7 @@ export default LANGUAGES.map((lang) => {
     path,
     url: site.origin + site.pathPrefix + path.slice(1),
     t: texts(lang),
+    // The rules without nines: the same texts, with those from `noNines` on top.
+    tNoNines: (({ noNines, ...t }) => merge(t, noNines ?? {}))(texts(lang)),
   };
 });

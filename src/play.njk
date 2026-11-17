@@ -41,6 +41,13 @@ scripts: ["/assets/game/ui.js"]
         </div>
         <p class="levelhelp">{{ g.levelHelp }}</p>
       </fieldset>
+      <fieldset>
+        <legend>{{ g.deck }}</legend>
+        <div class="choices">
+          <label><input type="radio" name="nines" value="1" checked><span>{{ g.withNines }}</span></label>
+          <label><input type="radio" name="nines" value="0"><span>{{ g.withoutNines }}</span></label>
+        </div>
+      </fieldset>
       <button type="submit" class="bigbtn">{{ g.start }}</button>
     </form>
     <div class="statsbox" data-stats></div>
