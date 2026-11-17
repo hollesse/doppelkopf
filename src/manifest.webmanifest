@@ -1,0 +1,16 @@
+{
+  "name": "Doppelkopf in 5 minutes",
+  "short_name": "Doppelkopf",
+  "description": "Doppelkopf rules in English and German – trumps, calls, scoring, practice and cheat sheet, also offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#143a57",
+  "theme_color": "#143a57",
+  "icons": [
+    { "src": "assets/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "assets/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "assets/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

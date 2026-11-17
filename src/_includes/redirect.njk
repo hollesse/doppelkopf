@@ -1,0 +1,21 @@
+{#- Only on English pages: send visitors to the same page in their saved or browser language. -#}
+(function () {
+  var paths = {
+    {%- for l in languages %}"{{ l.code }}": "{{ site.pathPrefix }}{{ l.path | replace('/', '', 1) }}"{% if not loop.last %}, {% endif %}{% endfor -%}
+  };
+  function fromBrowser() {
+    var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+    for (var i = 0; i < list.length; i++) {
+      var parts = String(list[i] || "").toLowerCase().split(/[-_]/);
+      var base = parts[0];
+      if (paths[base]) return base;
+    }
+    return null;
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("lang"); } catch (e) {}
+  var sub = "{{ subpath or '' }}"; // page below the language folder, if any
+  var base = paths[saved] || paths[fromBrowser()];
+  var target = base && base + sub;
+  if (target && target !== location.pathname) location.replace(target + location.hash);
+})();

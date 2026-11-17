@@ -1,1 +1,112 @@
 # doppelkopf
+
+**Doppelkopf in 5 Minuten** – eine Kurzanleitung für das Kartenspiel Doppelkopf, auf Englisch und Deutsch.
+Aufgebaut wie [shithead-rules](https://github.com/hollesse/shithead-rules): statische Seiten, gebaut mit
+[Eleventy](https://www.11ty.dev/). Jede Sprache ist eine eigene, fertig gerenderte Seite (`/`, `/de/`), die
+Regeln sind also auch ohne JavaScript lesbar. JavaScript ergänzt nur das Übungsquiz, QR-Code und
+Teilen-Buttons und merkt sich die gewählte Sprache.
+
+## Inhalt der Seite
+
+Aufbau (48 Karten, Austeilen) · Teams (Re und Kontra) · Trumpf und Fehl · Ein Stich (bedienen, wer gewinnt) ·
+Augen zählen · Quiz „Sticht das?“ · Ansagen (Re/Kontra, keine 90 … schwarz) · Abrechnung mit Sonderpunkten
+(Fuchs, Karlchen, Doppelkopf) und Beispiel · Hochzeit und Soli · Hausregeln · Strategien · Spickzettel · Teilen.
+
+Grundlage sind die Turnierspielregeln des Deutschen Doppelkopf-Verbands, vereinfacht. Verbreitete
+Abweichungen stehen im Abschnitt „Hausregeln“.
+
+## Entwickeln
+
+```sh
+npm install
+npm start        # Dev-Server mit Live-Reload: http://localhost:8080/doppelkopf/
+npm run check    # prüft die Übersetzungen (läuft auch bei jedem Build)
+npm run build    # schreibt die Seite nach _site/
+npm test         # Playwright-Tests gegen das gebaute _site/ (vorher npm run build)
+```
+
+Beim ersten Mal ggf. den Browser installieren: `npx playwright install chromium`.
+
+## Aufbau
+
+| Pfad | Inhalt |
+| --- | --- |
+| `src/index.njk` | Regelseite, wird einmal pro Sprache gerendert |
+| `src/_includes/layouts/base.njk` | Gemeinsamer Rahmen: Kopf, `hreflang`, Skripte |
+| `src/_includes/langmenu.njk` | Sprachmenü, verlinkt auf dieselbe Seite in jeder Sprache |
+| `src/_includes/card.njk` | Makros für die Spielkarten-Grafiken |
+| `src/_includes/redirect.njk` | Nur Startseite: leitet auf die gemerkte bzw. Browsersprache weiter |
+| `src/_data/languages.js` | Liste der Sprachen (Reihenfolge im Menü, Flagge, Fallback-Kette) |
+| `src/_data/i18n/*.json` | Texte pro Sprache, inklusive Quiztexte unter `quiz` und Kartenbuchstaben unter `ranks` |
+| `src/_data/site.js` | Öffentliche URL und Pfad-Präfix |
+| `src/_data/fonts.js` | Welche Schriften, Schnitte und Zeichensätze ausgeliefert werden |
+| `src/fonts.11ty.js` | Erzeugt `/assets/fonts.css` aus den `@fontsource`-Paketen |
+| `src/assets/` | Stylesheet, JavaScript und Icons, werden unverändert kopiert |
+| `src/assets/site.js` | Auf jeder Seite: Sprachmenü, Service Worker |
+| `src/assets/rules.js` | Quiz, QR-Code, Teilen |
+| `src/sw.js` | Service Worker (Vorlage), siehe „Offline“ |
+| `src/manifest.webmanifest` | Web-App-Manifest, macht die Seite installierbar |
+| `scripts/check-i18n.js` | Prüft die Übersetzungen, siehe unten |
+| `tests/site.spec.js` | Playwright-Tests: beide Sprachen, Weiterleitung, ohne JavaScript, Quiz, Teilen, Offline |
+| `tests/serve.js` | Kleiner Server, der `_site/` unter dem Pages-Pfad ausliefert |
+
+## Kartenbuchstaben
+
+Auf deutschen Karten steht B (Bube) und D (Dame), auf englischen J und Q. Die Buchstaben kommen aus
+`ranks` in der jeweiligen i18n-Datei, sowohl für die Grafiken auf der Seite als auch für das Quiz.
+
+## Quiz „Sticht das?“
+
+Eine Karte ist ausgespielt, du legst eine dazu: Gewinnt deine Karte? Bewertet wird nach den Regeln des
+normalen Spiels (Trumpfreihe, Fehlfarben, bei zwei gleichen Karten gewinnt die erste). Gut die Hälfte der
+Aufgaben hat dieselbe Farbe bzw. zweimal Trumpf, damit die interessanten Fälle oft vorkommen. Ein Test spielt
+40 Runden mit festem Zufall durch und prüft gegen eine unabhängig aufgeschriebene Version der Regeln.
+
+## Keine externen Ressourcen
+
+Die Seite lädt nichts von fremden Servern (kein Google Fonts, kein CDN):
+
+- **Schriften** kommen aus den npm-Paketen `@fontsource/atkinson-hyperlegible` und `@fontsource/archivo-black`
+  (beide SIL Open Font License 1.1). Ausgeliefert werden nur die in `src/_data/fonts.js` gelisteten
+  Schnitte und Zeichensätze.
+- **QR-Code** erzeugt `qrcode-generator` (MIT), kopiert nach `/assets/qrcode.js`.
+
+Ein Test stellt sicher, dass das so bleibt.
+
+## Offline
+
+Nach dem ersten Besuch funktioniert die ganze Seite ohne Netz, inklusive beider Sprachen, Quiz und
+QR-Code. Dafür speichert ein Service Worker alle Dateien der Seite:
+
+- `eleventy.config.js` schreibt nach jedem Build `_site/sw.js` aus der Vorlage `src/sw.js` und
+  trägt die Liste aller Dateien und einen Hash über ihren Inhalt ein. Ändert sich etwas, bekommt
+  der nächste Besuch eine neue Version und der alte Speicher wird gelöscht.
+- Seiten kommen zuerst aus dem Netz (Updates sind sofort da), nur offline aus dem Speicher.
+  CSS, JavaScript, Schriften und Icons kommen aus dem Speicher.
+- Über das Manifest lässt sich die Seite auf den Homescreen legen.
+
+Beim Entwickeln mit `npm start` ist der Service Worker auch aktiv: Geänderte CSS- oder JS-Dateien
+erscheinen deshalb erst nach einem zweiten Neuladen (oder in den DevTools „Update on reload“ aktivieren).
+
+## Sprachen
+
+Englisch ist Standard und liegt unter `/`, Deutsch unter `/de/`. Wer mit deutscher Browsersprache
+auf `/` kommt, wird nach `/de/` weitergeleitet; eine im Menü gewählte Sprache wird gemerkt und hat Vorrang.
+
+**Neue Sprache:** `src/_data/i18n/<code>.json` anlegen und eine Zeile in `src/_data/languages.js` ergänzen.
+Fehlende Texte kommen aus den `fallback`-Sprachen und zuletzt aus Englisch.
+
+**Prüfung:** `npm run check` (Teil von `npm run build`) bricht mit einer Liste der Probleme ab, wenn
+- ein Text fehlt, also weder in der Sprache selbst noch in einer ihrer Fallback-Sprachen steht und deshalb auf Englisch erscheinen würde,
+- ein Text leer ist oder nicht in Englisch vorkommt (Tippfehler, Überbleibsel),
+- Platzhalter wie `{mine}` oder `{led}` oder die HTML-Tags von Englisch abweichen oder Tags nicht geschlossen sind,
+- ein Link auf einen `#abschnitt` zeigt, den es auf der Seite nicht gibt,
+- `languages.js` und die JSON-Dateien nicht zusammenpassen.
+
+## Deployment
+
+`.github/workflows/ci.yml` baut die Seite und führt die Tests bei jedem Pull Request und Push aus.
+Nur auf `main` und nur wenn die Tests grün sind, wird sie auf GitHub Pages veröffentlicht
+(`https://hollesse.github.io/doppelkopf/`). Schlägt ein Test fehl, liegen Report und Screenshots als
+Artefakt `playwright-report` am Workflow-Lauf. Einmalig nötig: *Settings → Pages → Build and deployment →
+Source: GitHub Actions*. Für eine eigene Domain `src/_data/site.js` anpassen.

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <!-- a club: three leaves and a stem -->
+    <g id="club">
+      <circle cx="0" cy="-5" r="4.6"/>
+      <circle cx="-5" cy="2.2" r="4.6"/>
+      <circle cx="5" cy="2.2" r="4.6"/>
+      <path d="M-1.6 1h3.2l2.4 9.5h-8z"/>
+    </g>
+    <!-- a crown for the queen -->
+    <path id="crown" d="M-7 4h14l2-10-5.5 4.5L0-8l-3.5 6.5L-9-6z"/>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#1d4f73"/>
+  <!-- two queens of clubs: one card twice -->
+  <g transform="rotate(-13 32 44)">
+    <rect x="9" y="12" width="28" height="40" rx="4" fill="#fbfaf6" stroke="#143a57" stroke-opacity=".35"/>
+    <use href="#crown" transform="translate(23 25)" fill="#e8b22c"/>
+    <use href="#club" transform="translate(23 39) scale(.85)" fill="#1a1d21"/>
+  </g>
+  <g transform="rotate(11 32 44)">
+    <rect x="27" y="10" width="28" height="40" rx="4" fill="#fbfaf6" stroke="#143a57" stroke-opacity=".35"/>
+    <use href="#crown" transform="translate(41 23)" fill="#e8b22c"/>
+    <use href="#club" transform="translate(41 37) scale(.85)" fill="#1a1d21"/>
+  </g>
+</svg>
