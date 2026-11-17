@@ -65,6 +65,7 @@ scripts: ["/assets/game/ui.js"]
     <div id="opponents" class="opponents"></div>
 
     <div class="trickarea" id="trickarea" role="group" aria-label="{{ g.trick }}">
+      <button type="button" id="btn-last" class="lastbtn" aria-pressed="false">{{ g.lastTrickBtn }}</button>
       {%- for seat in [0, 1, 2, 3] %}
       <div class="tslot" data-seat="{{ seat }}"></div>
       {%- endfor %}
