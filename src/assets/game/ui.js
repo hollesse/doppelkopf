@@ -262,17 +262,27 @@ async function runBots() {
   const id = gameId;
   while (state.phase !== "over" && state.turn !== HUMAN) {
     render();
-    await sleep(state.phase === "reserve" ? BOT_DELAY / 2 : BOT_DELAY);
+    await sleep(20); // let the page show whose turn it is before the bot thinks
     if (id !== gameId) return; // a new game was started meanwhile
+    // The bot decides first ("strong" thinks for a moment), then waits the rest of the delay.
+    const started = performance.now();
     const p = state.turn;
+    let move;
+    if (state.phase === "reserve") move = { declaration: chooseDeclaration(state, p, level) };
+    else move = { call: chooseCall(state, p, level), card: chooseCard(state, p, level) };
+    const delay = state.phase === "reserve" ? BOT_DELAY / 2 : BOT_DELAY;
+    await sleep(Math.max(0, delay - (performance.now() - started)));
+    if (id !== gameId) return;
     const before = snapshot();
     let events;
-    if (state.phase === "reserve") {
-      events = E.declare(state, p, chooseDeclaration(state, p, level));
+    if (move.declaration) {
+      events = E.declare(state, p, move.declaration);
     } else {
       events = [];
-      while (chooseCall(state, p, level)) events.push(...E.call(state, p));
-      events.push(...E.play(state, p, chooseCard(state, p, level)));
+      // A call comes before the card, so the card was chosen without it: that's the same,
+      // calls don't change which cards are allowed.
+      while (move.call && chooseCall(state, p, level)) events.push(...E.call(state, p));
+      events.push(...E.play(state, p, move.card));
     }
     if (!(await show(events, before))) return;
   }
@@ -358,7 +368,7 @@ function newMatch({ level: chosen, player = "" }) {
 
 // ---------- Statistics (only in this browser) ----------
 
-const LEVELS = ["easy", "normal"];
+const LEVELS = ["normal", "strong"];
 const emptyStats = () => Object.fromEntries(LEVELS.map((l) => [l, { games: 0, wins: 0, points: 0 }]));
 
 function loadStats() {
@@ -401,8 +411,8 @@ function renderStats() {
     `<tr class="${cls}"><th scope="row">${name}</th><td>${r.games}</td><td>${r.wins}</td><td>${signed(r.points)}</td></tr>`;
   const html = total.games
     ? `<h3>${T.statsH}</h3><table class="stats"><thead><tr><th></th><th scope="col">${T.statsGames}</th><th scope="col">${T.statsWins}</th><th scope="col">${T.statsPoints}</th></tr></thead><tbody>` +
-      row(T.easy, stats.easy) +
       row(T.normal, stats.normal) +
+      row(T.strong, stats.strong) +
       row(T.statsTotal, total, "total") +
       `</tbody></table><p class="statsnote">${T.statsNote} <button type="button" class="linkbtn" data-reset-stats>${T.statsReset}</button></p>`
     : "";

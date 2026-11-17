@@ -53,7 +53,9 @@ Beim ersten Mal ggf. den Browser installieren: `npx playwright install chromium`
 | `scripts/check-i18n.js` | Prüft die Übersetzungen, siehe unten |
 | `tests/site.spec.js` | Playwright-Tests: beide Sprachen, Weiterleitung, ohne JavaScript, Quiz, Teilen, Offline |
 | `tests/play.spec.js` | Spielseite: beide Sprachen, komplette Partien über die Oberfläche, Ansagen, Solo, Layout |
-| `tests/engine.spec.js` | Spielregeln, Abrechnung und Bots ohne Browser, inklusive Tausender simulierter Partien |
+| `tests/engine.spec.js` | Spielregeln und Abrechnung ohne Browser, inklusive Tausender simulierter Partien |
+| `tests/bots.spec.js` | Die Bots in typischen Situationen: halten sie die Konventionen ein? |
+| `scripts/arena.mjs` | Lässt zwei Bot-Stufen fair gegeneinander spielen (`npm run arena`) |
 | `tests/serve.js` | Kleiner Server, der `_site/` unter dem Pages-Pfad ausliefert |
 
 ## Gegen Bots spielen
@@ -68,15 +70,32 @@ Du spielst mit drei Bots, die Spielseite läuft komplett im Browser, ohne Server
 - `engine.js` enthält nur die Regeln, ohne Oberfläche, und lässt sich so in Node testen und simulieren.
   `knownParties()` liefert, was ein Spieler über die Parteien wissen kann (eigene Karten, gespielte
   Kreuz-Damen, Ansagen, Abzählen). Danach richten sich die Bots und die Re/Kontra-Abzeichen am Tisch.
-- `bots.js`: **Leicht** legt eine zufällige erlaubte Karte und sagt nie etwas an. **Normal** spielt die
-  Strategien von der Regelseite: Fehl-Asse beim ersten Durchgang, Stiche des Partners schmieren, Stiche
-  mit Punkten möglichst billig holen, den Fuchs schützen, mit starker Hand Re/Kontra ansagen, mit sehr
-  starker Hand ein Solo. In der Simulation holen normale Bots gegen leichte knapp einen Punkt pro Spiel mehr.
+- `bots.js` hat zwei Stufen:
+  - **Normal** spielt nach den Konventionen von der Regelseite, damit man seine Karten lesen kann
+    wie die eines Menschen: Re spielt Trumpf an, Kontra Fehl; ein Re-Spieler legt die Kreuz-Dame,
+    sobald sie einen Stich holt; Fehl-Asse beim ersten Durchgang (schwarze vor Herz), keine zweite
+    Runde Herz; geschmiert wird nur ein Stich, den der Partner sicher hat (Fuchs zuerst); gestochen
+    mit mindestens einem Buben, solange noch jemand überstechen kann; Re/Kontra früh mit gutem Blatt,
+    Soli nur mit klaren Blättern. Die Bots wissen nur, was ein Mensch am Tisch wissen kann, und deuten
+    Anspiele als Hinweis („spielt Trumpf an, ist wohl Re“).
+  - **Stark** spielt genauso, denkt aber vor jeder Karte voraus: Es würfelt mehrere Verteilungen der
+    verdeckten Karten aus, die zu allem Gesehenen passen (wer welche Farbe nicht bedienen konnte, wer
+    eine Kreuz-Dame haben muss oder keine haben kann), spielt das Spiel für jede mögliche Karte im Kopf
+    mit Normal-Bots zu Ende und nimmt die Karte mit dem besten Durchschnitt. Das Verfahren heißt
+    „Perfect Information Monte Carlo“; für Doppelkopf beschrieben von Sievers und Helmert
+    ([KI 2015](https://ai.dmi.unibas.ch/papers/sievers-helmert-ki2015.pdf)). Budget: 160 Durchläufe pro
+    Zug, gleiche Karten zählen einmal; ein Zug dauert am Rechner meist 30–100 ms.
+- **Messen statt raten:** `npm run arena -- normal strong 150` lässt zwei Stufen gegeneinander
+  antreten, fair: Jede Kartenverteilung wird zweimal gespielt, mit vertauschten Plätzen. Stand bei
+  Einführung: Stark holt gegen Normal 0,45 ± 0,35 Punkte pro Spiel und Platz mehr. Die Ansage-Schwellen
+  (`TUNING` in `bots.js`) sind so gewählt, dass Ansagen die meisten Punkte bringen (unter vier
+  Normal-Bots: 0,9 Ansagen pro Spiel, 77 % davon gewonnen). Mit den Konventionen ist im Schnitt nach
+  dem 4,6. Stich klar, wer zu wem gehört (vorher 6,7).
 - **Ablauf:** Vor jedem Spiel fragt die Seite „Gesund oder Vorbehalt?“. Karte antippen und nochmal
   antippen (oder „Legen“) spielt sie; nicht erlaubte Karten sind abgedunkelt und erklären beim Antippen,
   was zu bedienen ist. Der Ansage-Knopf erscheint, solange deine nächste Ansage erlaubt ist.
 - **Spielstand:** Nach jedem Spiel zeigt die Seite Augen, die einzelnen Spielpunkte und den laufenden
-  Stand aller vier Spieler. Die Statistik (Spiele, Siege, Punkte pro Schwierigkeit) steht nur im
+  Stand aller vier Spieler. Die Statistik (Spiele, Siege, Punkte pro Stufe) steht nur im
   `localStorage` des Geräts (`game-stats`).
 - **Layout** wie bei Shithead: Während einer Partie füllt der Tisch genau einen Bildschirm, alle Bereiche
   haben feste Höhen, die Kartengröße richtet sich nach der Bildschirmhöhe. Ein Test prüft auf

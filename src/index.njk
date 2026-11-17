@@ -279,7 +279,7 @@ scripts: ["/assets/rules.js"]
     <h2>{{ t.stH }}</h2>
     <p class="lead">{{ t.stLead | safe }}</p>
     <ul class="strats">
-      {%- for i in range(1, 8) %}
+      {%- for i in range(1, 9) %}
       <li><h3>{{ t["t" + i + "h"] }}</h3><p>{{ t["t" + i + "p"] | safe }}</p></li>
       {%- endfor %}
     </ul>
