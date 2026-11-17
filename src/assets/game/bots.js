@@ -299,30 +299,50 @@ function discard(contract, legal) {
 /** Games played in the head per decision, shared by the cards to choose from. */
 export const BUDGET = { rollouts: 160, minWorlds: 8, maxWorlds: 30 };
 
+/**
+ * How much better (in game points per game) another card must look than the card the
+ * conventions would play, beyond the noise. With few imagined deals the averages are
+ * noisy; without this, "strong" sometimes threw a queen into a trick its partner had
+ * already won, just because that card happened to come out ahead by chance.
+ */
+export const OVERRULE = { margin: 0.1, sigmas: 2 };
+
 function search(state, p, legal, random) {
   // Both copies of a card are worth the same: try each kind once.
   const kinds = [...new Map(legal.map((card) => [E.key(card), card])).values()];
   const preferred = conventionCard(state, p, legal);
   if (kinds.length === 1) return preferred.id;
   const target = Math.max(BUDGET.minWorlds, Math.min(BUDGET.maxWorlds, Math.floor(BUDGET.rollouts / kinds.length)));
-  const totals = new Map(kinds.map((card) => [card.id, 0]));
-  let worlds = 0;
+  // values[k][w]: how card kind k does in imagined deal w. Every card is tried on the same
+  // deals, so they can be compared deal by deal ("paired"), which cancels most of the luck.
+  const values = kinds.map(() => []);
   for (let w = 0; w < target; w++) {
     const world = sampleWorld(state, p, random);
     if (!world) continue;
-    worlds++;
-    for (const card of kinds) {
+    kinds.forEach((card, k) => {
       const sim = structuredClone(world);
       E.play(sim, p, card.id);
-      totals.set(card.id, totals.get(card.id) + rollout(sim, p));
-    }
+      values[k].push(rollout(sim, p));
+    });
   }
-  if (!worlds) return preferred.id;
-  // The best average; ties go to the card the conventions would play.
-  const same = kinds.find((card) => E.key(card) === E.key(preferred));
-  let bestId = same.id;
-  for (const [id, total] of totals) if (total > totals.get(bestId) + 1e-9) bestId = id;
-  return bestId === same.id ? preferred.id : bestId;
+  const base = kinds.findIndex((card) => E.key(card) === E.key(preferred));
+  const n = values[base].length;
+  if (n < 2) return preferred.id;
+  // Overrule the conventions only for a card that is clearly better.
+  let best = null;
+  let bestGain = 0;
+  kinds.forEach((card, k) => {
+    if (k === base) return;
+    const diffs = values[k].map((v, w) => v - values[base][w]);
+    const mean = diffs.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(diffs.reduce((a, d) => a + (d - mean) ** 2, 0) / (n - 1));
+    const sure = mean - OVERRULE.sigmas * (sd / Math.sqrt(n));
+    if (sure > OVERRULE.margin && mean > bestGain) {
+      best = card;
+      bestGain = mean;
+    }
+  });
+  return best ? best.id : preferred.id;
 }
 
 /** Plays the game to the end with "normal" bots everywhere (no new calls); value for `p`. */

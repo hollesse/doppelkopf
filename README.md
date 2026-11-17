@@ -91,6 +91,11 @@ Du spielst mit drei Bots, die Spielseite läuft komplett im Browser, ohne Server
     „Perfect Information Monte Carlo“; für Doppelkopf beschrieben von Sievers und Helmert
     ([KI 2015](https://ai.dmi.unibas.ch/papers/sievers-helmert-ki2015.pdf)). Budget: 160 Durchläufe pro
     Zug, gleiche Karten zählen einmal; ein Zug dauert am Rechner meist 30–100 ms.
+    Von der Karte, die die Konventionen spielen würden, weicht Stark nur ab, wenn eine andere Karte
+    auf denselben ausgewürfelten Verteilungen *deutlich* besser abschneidet (Vorsprung über dem
+    doppelten Rauschen, `OVERRULE` in `bots.js`). Ohne diese Bremse hat Stark wegen der wenigen
+    Verteilungen pro Karte manchmal Zufallssieger gespielt, etwa eine Dame in einen Stich, den der
+    Partner schon sicher hatte.
 - **Messen statt raten:** `npm run arena -- normal strong 150` lässt zwei Stufen gegeneinander
   antreten, fair: Jede Kartenverteilung wird zweimal gespielt, mit vertauschten Plätzen. Stand bei
   Einführung: Stark holt gegen Normal 0,45 ± 0,35 Punkte pro Spiel und Platz mehr. Die Ansage-Schwellen

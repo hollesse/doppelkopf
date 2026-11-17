@@ -163,6 +163,28 @@ test.describe("what a bot believes", () => {
     }
   });
 
+  test("strong doesn't throw a queen into a trick its partner has already won", () => {
+    // Reported from a real game: both Re players called and played a jack, you (Kontra)
+    // took the trick with the queen of spades, and your partner, last to play, added
+    // the other queen of spades instead of a jack.
+    const deck = E.shuffle(E.createDeck(), seeded(101));
+    const fixed = { 0: "Q♣ J♣", 1: "Q♣ J♠", 2: "Q♠", 3: "Q♠ J♥" };
+    const hands = [0, 1, 2, 3].map((p) => take(deck, fixed[p]));
+    for (const hand of hands) while (hand.length < 12) hand.push(deck.shift());
+    const state = E.createGame({ dealer: 3, hands });
+    for (let p = 0; p < 4; p++) E.declare(state, p, "healthy");
+    E.call(state, 0);
+    E.call(state, 1); // both Re are known, so seat 3 knows seat 2 is its partner
+    play(state, "J♣");
+    play(state, "J♠");
+    play(state, "Q♠");
+    expect(normal(state, 3)).toBe("J♥");
+    for (let i = 0; i < 10; i++) {
+      const k = cardOf(state, 3, chooseCard(state, 3, "strong", seeded(i)));
+      expect(k, `run ${i}`).not.toMatch(/^Q/);
+    }
+  });
+
   test("strong looks ahead and still only plays allowed cards", () => {
     const state = game(DEAL);
     play(state, "A♣");
