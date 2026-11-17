@@ -176,11 +176,16 @@ function view(state, p) {
 }
 
 /** Could one of `players` (still to play) beat `card` in a trick led with `led`? */
+/** A plain suit with at most 6 cards in the deck (hearts in a normal game). */
+const shortSuit = (state, suit) => deckOf(state).filter((c) => c.suit === suit && !E.isTrump(state.contract, c)).length <= 6;
+
 function canBeBeaten(state, v, card, led, players) {
   const higher = v.unseen.filter((c) => E.beats(v.contract, c, card, led));
   if (!higher.length) return false;
   return players.some((q) => {
-    const voidLed = v.empty[q].has(led) || (led !== "T" && (v.rounds[led] ?? 0) >= 1);
+    // Out of the suit for sure, or likely: after a first round, or in a short suit like
+    // hearts in a normal game (only 6 plain cards), where someone is often blank already.
+    const voidLed = v.empty[q].has(led) || (led !== "T" && ((v.rounds[led] ?? 0) >= 1 || shortSuit(state, led)));
     // Following suit with a higher card, or trumping in when out of the suit.
     if (!voidLed) return higher.some((c) => E.group(v.contract, c) === led);
     return !v.empty[q].has("T") && higher.some((c) => E.isTrump(v.contract, c));
@@ -220,13 +225,18 @@ function lead(state, p, legal, v) {
     return [...pool].sort((a, b) => suitLength(a.suit) - suitLength(b.suit) || byCheapest(contract)(a, b))[0];
   };
 
-  if (soloist) return trumps.length ? (boss.length ? cheapest(contract, boss) : lowTrump()) : lowPlain();
+  if (soloist) {
+    if (boss.length) return cheapest(contract, boss);
+    // Pull trumps with small ones; if only the fox is left, rather a plain card.
+    return notFox(trumps).length || !plain.length ? lowTrump() : lowPlain();
+  }
   if (againstSolo) return plain.length ? lowPlain() : lowTrump();
 
   // Re leads trumps (the partner's queen of clubs can take it), Kontra leads plain suits.
   // If the partner announced Kontra, they have strength in trumps: lead a trump for them.
   const partnerCalled = state.callLog.some((c) => v.partner(c.player));
-  if (trumps.length && (v.side === "re" || partnerCalled || !plain.length)) {
+  // (Never lead the fox for this, if anything else is possible.)
+  if (notFox(trumps).length && (v.side === "re" || partnerCalled || !plain.length)) {
     if (boss.length && trumps.length >= 4) return cheapest(contract, boss);
     return lowTrump();
   }
@@ -247,8 +257,11 @@ function follow(state, p, legal, v) {
   const partnerBest = v.partner(best.player);
   const partnerSafe = partnerBest && !canBeBeaten(state, v, best.card, led, opponentsAfter);
 
-  // 1. The partner has the trick for sure: load it up, the fox first.
-  if (partnerSafe) return schmier(contract, legal);
+  // 1. The partner has the trick for sure: load it up, the fox first. Only for a partner we
+  //    know for sure (a played queen of clubs, a call, counting) – a partner guessed from
+  //    the leads may be an opponent, and then the fox and the aces are gone.
+  if (partnerSafe && E.knownParties(state, p)[best.player] === v.side) return schmier(contract, legal);
+  if (partnerSafe) return discard(contract, legal);
 
   // 2. Show the queen of clubs (Re) as soon as it takes a trick: the partner then knows.
   if (contract === "normal" && v.side === "re" && !state.revealed[p]) {
@@ -259,14 +272,15 @@ function follow(state, p, legal, v) {
   // 3. Take the trick if it is worth it and nobody after us can take it back.
   if (!partnerBest && sureWinners.length) {
     const worth = points + Math.max(...sureWinners.map((c) => E.POINTS[c.rank]));
-    const cheap = cheapest(contract, sureWinners);
+    // The fox only when nobody can come after us: otherwise it's not as safe as it looks.
+    const cheap = cheapest(contract, after.length ? withoutFox(sureWinners) : sureWinners);
     if (worth >= 10 || strength(contract, cheap) < 92 || after.length === 0) return cheap;
   }
 
   // 4. An opponent leads a plain suit we can't follow: trump in high enough (at least a jack)
   //    while someone can still overtrump with the fox or a lower trump.
   if (!partnerBest && led !== "T" && winners.length && winners.every((c) => E.isTrump(contract, c))) {
-    const jackOrBetter = winners.filter((c) => E.trumpRank(contract, c) <= 8 && E.trumpRank(contract, c) >= 0);
+    const jackOrBetter = winners.filter((c) => E.trumpRank(contract, c) <= 8 && E.trumpRank(contract, c) >= 0); // never the fox
     if (opponentsAfter.length && jackOrBetter.length && points >= 10) return cheapest(contract, jackOrBetter);
     if (!opponentsAfter.length && (points >= 4 || winners.some((c) => strength(contract, c) < 92))) return cheapest(contract, winners);
   }
@@ -278,6 +292,9 @@ function follow(state, p, legal, v) {
   // 7. Otherwise: give as little as possible, keep the fox and strong cards.
   return discard(contract, legal);
 }
+
+/** The cards without the fox, unless that leaves nothing. */
+const withoutFox = (cards) => (cards.some((c) => !isFox(c)) ? cards.filter((c) => !isFox(c)) : cards);
 
 /** Load up the partner's trick: fox, aces, tens, then other points – but keep the high trumps. */
 function schmier(contract, legal) {
@@ -299,30 +316,99 @@ function discard(contract, legal) {
 /** Games played in the head per decision, shared by the cards to choose from. */
 export const BUDGET = { rollouts: 160, minWorlds: 8, maxWorlds: 30 };
 
+/**
+ * How much better (in game points per game) another card must look than the card the
+ * conventions would play, beyond the noise. With few imagined deals the averages are
+ * noisy; without this, "strong" sometimes threw a queen into a trick its partner had
+ * already won, just because that card happened to come out ahead by chance.
+ */
+export const OVERRULE = { margin: 0.1, sigmas: 2 };
+
+/**
+ * Moves that are (almost) always mistakes, judged only by what `p` knows: a Dulle or queen
+ * or too few points into a trick the partner surely has, an ace or ten into an opponent's
+ * trick, the fox into a trick that isn't surely ours, leading the fox while a higher trump
+ * is out, a second round of hearts when a fresh suit is there. "strong" never chooses such
+ * a card over the conventions: its look-ahead plays the rest of the game knowing the
+ * imagined cards, which makes some of these look better than they are at a real table.
+ * (scripts/audit.mjs counts the same patterns.)
+ */
+export function dubious(state, p, card, legal) {
+  const contract = state.contract;
+  const high = (c) => E.trumpRank(contract, c) >= 0 && E.trumpRank(contract, c) <= 4;
+  if (!legal.some((c) => E.key(c) !== E.key(card))) return false;
+  const trick = state.trick;
+  if (!trick.length) {
+    if (isFox(card) && E.isTrump(contract, card)) {
+      const higherOut = unseenCards(state, p).some((c) => E.beats(contract, c, card, "T"));
+      if (higherOut) return true;
+    }
+    const ledBefore = (g) => state.tricks.some((t) => E.group(contract, t.cards[0].card) === g);
+    const fresh = legal.some((c) => !E.isTrump(contract, c) && !ledBefore(c.suit));
+    return E.group(contract, card) === "♥" && ledBefore("♥") && fresh;
+  }
+  const side = E.party(state, p);
+  const known = E.knownParties(state, p);
+  const led = E.group(contract, trick[0].card);
+  const best = trick[E.winningIndex(contract, trick)];
+  const last = trick.length === E.PLAYERS - 1;
+  const partner = side && best.player !== p && known[best.player] === side;
+  const opponent = side && known[best.player] && known[best.player] !== side;
+  const wins = (c) => E.beats(contract, c, best.card, led);
+  if (last && partner) {
+    const lower = legal.filter((c) => !high(c));
+    if (high(card) && lower.length) return true;
+    const most = Math.max(...(lower.length ? lower : legal).map((c) => E.POINTS[c.rank]));
+    if (most - E.POINTS[card.rank] >= 7) return true;
+  }
+  if (last && opponent && !wins(card) && E.POINTS[card.rank] >= 10 && legal.some((c) => E.POINTS[c.rank] <= 4)) return true;
+  // The fox only into a trick a known partner holds, or one we take for sure: not into
+  // someone else's trick hoping the partner takes it after us, and not to win while someone
+  // who isn't surely our partner still plays after us.
+  if (isFox(card) && legal.some((c) => !isFox(c) && !high(c))) {
+    if (!wins(card) && !partner) return true;
+    const after = SIDES.map((i) => (p + i) % 4).slice(1, 4 - trick.length);
+    if (wins(card) && after.some((q) => !(side && known[q] === side))) return true;
+  }
+  return false;
+}
+
 function search(state, p, legal, random) {
   // Both copies of a card are worth the same: try each kind once.
   const kinds = [...new Map(legal.map((card) => [E.key(card), card])).values()];
   const preferred = conventionCard(state, p, legal);
   if (kinds.length === 1) return preferred.id;
   const target = Math.max(BUDGET.minWorlds, Math.min(BUDGET.maxWorlds, Math.floor(BUDGET.rollouts / kinds.length)));
-  const totals = new Map(kinds.map((card) => [card.id, 0]));
-  let worlds = 0;
+  // values[k][w]: how card kind k does in imagined deal w. Every card is tried on the same
+  // deals, so they can be compared deal by deal ("paired"), which cancels most of the luck.
+  const values = kinds.map(() => []);
   for (let w = 0; w < target; w++) {
     const world = sampleWorld(state, p, random);
     if (!world) continue;
-    worlds++;
-    for (const card of kinds) {
+    kinds.forEach((card, k) => {
       const sim = structuredClone(world);
       E.play(sim, p, card.id);
-      totals.set(card.id, totals.get(card.id) + rollout(sim, p));
-    }
+      values[k].push(rollout(sim, p));
+    });
   }
-  if (!worlds) return preferred.id;
-  // The best average; ties go to the card the conventions would play.
-  const same = kinds.find((card) => E.key(card) === E.key(preferred));
-  let bestId = same.id;
-  for (const [id, total] of totals) if (total > totals.get(bestId) + 1e-9) bestId = id;
-  return bestId === same.id ? preferred.id : bestId;
+  const base = kinds.findIndex((card) => E.key(card) === E.key(preferred));
+  const n = values[base].length;
+  if (n < 2) return preferred.id;
+  // Overrule the conventions only for a card that is clearly better.
+  let best = null;
+  let bestGain = 0;
+  kinds.forEach((card, k) => {
+    if (k === base || dubious(state, p, card, legal)) return;
+    const diffs = values[k].map((v, w) => v - values[base][w]);
+    const mean = diffs.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(diffs.reduce((a, d) => a + (d - mean) ** 2, 0) / (n - 1));
+    const sure = mean - OVERRULE.sigmas * (sd / Math.sqrt(n));
+    if (sure > OVERRULE.margin && mean > bestGain) {
+      best = card;
+      bestGain = mean;
+    }
+  });
+  return best ? best.id : preferred.id;
 }
 
 /** Plays the game to the end with "normal" bots everywhere (no new calls); value for `p`. */

@@ -35,6 +35,7 @@ let log = [];
 let botsRunning = false;
 let animating = false; // no input while cards are moving
 let swept = false; // the last trick was collected and is no longer shown
+let peek = false; // showing the last finished trick instead of the current one
 let gameId = 0;
 
 // ---------- Texts ----------
@@ -126,14 +127,20 @@ function render() {
 
   // The trick: the current one, or the last one until it was collected.
   const last = state.tricks.at(-1);
-  const shown = state.trick.length ? state.trick : swept || !last ? [] : last.cards;
-  const winner = !state.trick.length && last && !swept ? last.winner : null;
-  for (const slot of $("trickarea").children) {
+  // "Last trick" shows the most recently finished trick until the next card is played.
+  const peeking = peek && Boolean(last) && state.phase === "play";
+  const shown = peeking ? last.cards : state.trick.length ? state.trick : swept || !last ? [] : last.cards;
+  const winner = peeking ? last.winner : !state.trick.length && last && !swept ? last.winner : null;
+  for (const slot of $("trickarea").querySelectorAll(".tslot")) {
     const seat = Number(slot.dataset.seat);
     const entry = shown.find((e) => e.player === seat);
     slot.innerHTML = entry ? cardHTML(entry.card, { classes: seat === winner ? "gold" : "" }) : "";
   }
   $("trickarea").classList.toggle("done", winner !== null);
+  $("trickarea").classList.toggle("peek", peeking);
+  $("btn-last").classList.toggle("off", !last || state.phase !== "play");
+  $("btn-last").setAttribute("aria-pressed", String(peeking));
+  $("btn-last").textContent = peeking ? T.lastTrickBack : T.lastTrickBtn;
 
   // You
   const me = state.players[HUMAN];
@@ -166,7 +173,9 @@ function render() {
   }
 
   // Messages
-  $("status").textContent = hint || statusText(myTurn);
+  $("status").textContent = peeking
+    ? fill(last.winner === HUMAN ? T.youLastTrick : T.lastTrick, { name: names[last.winner], n: last.points })
+    : hint || statusText(myTurn);
   $("log").replaceChildren(...log.map((line) => listItem(line)));
 }
 
@@ -224,7 +233,10 @@ async function show(events, before) {
   const id = gameId;
   logEvents(events);
   const played = events.find((e) => e.type === "play");
-  if (played) swept = false;
+  if (played) {
+    swept = false;
+    peek = false; // a new card: back to the current trick
+  }
   animating = true; // before render(), so it never shows "your turn" too early
   render();
   if (played) await flyIn(played, before);
@@ -321,6 +333,12 @@ $("btn-play").addEventListener("click", () => {
   }
 });
 
+$("btn-last").addEventListener("click", () => {
+  if (!state) return;
+  peek = !peek;
+  render();
+});
+
 $("btn-call").addEventListener("click", () => {
   if (!state || animating || !E.nextCall(state, HUMAN)) return;
   logEvents(E.call(state, HUMAN));
@@ -341,6 +359,7 @@ function startGame() {
   botsRunning = false;
   animating = false;
   swept = false;
+  peek = false;
   dealer = E.next(dealer);
   state = E.createGame({ dealer, nines });
   selected = null;

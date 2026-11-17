@@ -332,7 +332,7 @@ html.playing .game {
 }
 
 /* Grouped around the middle, however tall the area is. */
-.tslot[data-seat="0"] { left: calc(50% - var(--cw) / 2); top: calc(50% - var(--ch) * 0.08); }
+.tslot[data-seat="0"] { left: calc(50% - var(--cw) / 2); top: calc(50% - var(--ch) * 0.08); z-index: 1; } /* on top: its corner sits on the card across */
 .tslot[data-seat="1"] { left: calc(50% - var(--cw) * 1.75); top: calc(50% - var(--ch) / 2); }
 .tslot[data-seat="2"] { left: calc(50% - var(--cw) / 2); top: calc(50% - var(--ch) * 0.92); }
 .tslot[data-seat="3"] { left: calc(50% + var(--cw) * 0.75); top: calc(50% - var(--ch) / 2); }
@@ -345,9 +345,38 @@ html.playing .game {
 .tslot[data-seat="1"] .card { transform: rotate(-6deg); }
 .tslot[data-seat="3"] .card { transform: rotate(6deg); }
 
+/* "Last trick": top left on the felt, hidden (but keeping its place) before the first trick */
+.lastbtn {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 2;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--felt-text);
+  font: 700 0.8rem/1.2 var(--font-body);
+  cursor: pointer;
+}
+
+.lastbtn[aria-pressed="true"] {
+  background: var(--gold);
+  color: var(--card-ink);
+}
+
+.lastbtn.off {
+  visibility: hidden;
+}
+
+/* While looking at the last trick, the felt gets a gold frame. */
+.trickarea.peek {
+  box-shadow: inset 0 0 0 3px var(--gold);
+}
+
 /* A finished trick stays until the next card; the winning card is outlined. */
 .trickarea.done .card:not(.gold) {
-  opacity: 0.75;
+  filter: brightness(0.82); /* not transparent: overlapping cards stay readable */
 }
 
 .card.gold {

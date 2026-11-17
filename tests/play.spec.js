@@ -234,6 +234,47 @@ test("a game without nines: 10 cards each (preselected from the rules page)", as
   expect(points[0] + points[1]).toBe(240);
 });
 
+test("looking at the last trick", async ({ page }) => {
+  test.setTimeout(60_000);
+  const g = byCode.de.t.game;
+  await seed(page, 7);
+  await openPlay(page, byCode.de);
+  await start(page);
+  const button = page.locator("#btn-last");
+  // Before the first card (the reservation round) there is nothing to look at.
+  expect(await waitForMe(page)).toBe("reserve");
+  await expect(button).toBeHidden();
+  await page.locator('[data-declare="healthy"]').click();
+  await waitForMe(page);
+  // Play until a trick is finished and a new one has started.
+  for (let i = 0; i < 3; i++) {
+    await playFirstCard(page);
+    await waitForMe(page);
+  }
+  await expect(button).toBeVisible();
+  await expect(button).toHaveText(g.lastTrickBtn);
+
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await expect(button).toHaveText(g.lastTrickBack);
+  await expect(page.locator("#trickarea")).toHaveClass(/peek/);
+  await expect(page.locator(".tslot .card")).toHaveCount(4);
+  await expect(page.locator(".tslot .card.gold")).toHaveCount(1);
+  await expect(page.locator("#status")).toContainText(g.lastTrick.split(":")[0]);
+  await expect(page.locator("#status")).toContainText(/\d+ Augen/);
+
+  // Tapping again goes back to the game.
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#trickarea")).not.toHaveClass(/peek/);
+
+  // Playing a card while looking closes it too.
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await playFirstCard(page);
+  await expect(button).toHaveAttribute("aria-pressed", "false");
+});
+
 test("the table fits one screen and nothing moves between moves", async ({ browser, baseURL }) => {
   test.setTimeout(60_000);
   for (const viewport of [{ width: 320, height: 568 }, { width: 820, height: 1180 }]) {

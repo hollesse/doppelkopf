@@ -91,6 +91,20 @@ Du spielst mit drei Bots, die Spielseite läuft komplett im Browser, ohne Server
     „Perfect Information Monte Carlo“; für Doppelkopf beschrieben von Sievers und Helmert
     ([KI 2015](https://ai.dmi.unibas.ch/papers/sievers-helmert-ki2015.pdf)). Budget: 160 Durchläufe pro
     Zug, gleiche Karten zählen einmal; ein Zug dauert am Rechner meist 30–100 ms.
+    Von der Karte, die die Konventionen spielen würden, weicht Stark nur ab, wenn eine andere Karte
+    auf denselben ausgewürfelten Verteilungen *deutlich* besser abschneidet (Vorsprung über dem
+    doppelten Rauschen, `OVERRULE` in `bots.js`). Ohne diese Bremse hat Stark wegen der wenigen
+    Verteilungen pro Karte manchmal Zufallssieger gespielt, etwa eine Dame in einen Stich, den der
+    Partner schon sicher hatte. Außerdem wählt Stark nie einen „zweifelhaften“ Zug (`dubious()` in
+    `bots.js`) statt der Konventionskarte: Dulle oder Dame in einen sicheren Partner-Stich, Ass oder
+    Zehn in einen Gegner-Stich, den Fuchs in einen Stich, der nicht sicher dem eigenen Team gehört,
+    den Fuchs anspielen, solange ein höherer Trumpf draußen ist, eine zweite Runde Herz. Beim
+    Vorausrechnen spielen die Bots die ausgewürfelten Karten offen zu Ende; dadurch sehen solche
+    Züge manchmal besser aus, als sie am echten Tisch sind („strategy fusion“).
+- **Fehler suchen:** `npm run audit -- strong normal 100` lässt zwei Stufen spielen wie die Arena und
+  prüft jede Karte auf Muster, die fast immer Fehler sind (siehe oben, dazu: Fuchs verloren, billigen
+  Stich nicht genommen, Partner mit hohem Trumpf überstochen). Bewertet wird nur mit dem, was der Bot
+  wissen konnte. Ausgabe: Häufigkeit pro 1.000 Entscheidungen und Beispiele mit Hand und Stich.
 - **Messen statt raten:** `npm run arena -- normal strong 150` lässt zwei Stufen gegeneinander
   antreten, fair: Jede Kartenverteilung wird zweimal gespielt, mit vertauschten Plätzen. Stand bei
   Einführung: Stark holt gegen Normal 0,45 ± 0,35 Punkte pro Spiel und Platz mehr. Die Ansage-Schwellen
