@@ -25,6 +25,7 @@ const sameName = (a, b) => a.localeCompare(b, document.documentElement.lang, { s
 
 let state = null;
 let level = "normal";
+let nines = true; // false: 40 cards, 10 each
 let names = [];
 let dealer = E.PLAYERS - 1; // the first game is led by you
 let session = { games: 0, totals: [0, 0, 0, 0] };
@@ -341,17 +342,18 @@ function startGame() {
   animating = false;
   swept = false;
   dealer = E.next(dealer);
-  state = E.createGame({ dealer });
+  state = E.createGame({ dealer, nines });
   selected = null;
   hint = "";
-  log = [fill(T.gameNo, { n: session.games + 1 })];
+  log = [`${fill(T.gameNo, { n: session.games + 1 })} · ${nines ? T.withNines : T.withoutNines}`];
   $("over").hidden = true;
   render();
   runBots();
 }
 
-function newMatch({ level: chosen, player = "" }) {
+function newMatch({ level: chosen, player = "", nines: withNines = true }) {
   level = chosen;
+  nines = withNines;
   // Typical first names of the page language, in random order. A bot that has
   // your name uses its alternative.
   const me = player.trim() || T.you;
@@ -471,7 +473,7 @@ function showOver() {
 
 function readSettings() {
   const form = $("setup-form");
-  return { level: form.level.value, player: form.player.value.trim() };
+  return { level: form.level.value, player: form.player.value.trim(), nines: form.nines.value === "1" };
 }
 
 $("setup-form").addEventListener("submit", (event) => {
@@ -501,8 +503,13 @@ try {
   if (saved) {
     const form = $("setup-form");
     if (LEVELS.includes(saved.level)) form.level.value = saved.level;
+    if (typeof saved.nines === "boolean") form.nines.value = saved.nines ? "1" : "0";
     form.player.value = saved.player ?? "";
   }
 } catch {}
+
+// Coming from the rules without nines (play/?nines=0): preselect that.
+const wanted = new URLSearchParams(location.search).get("nines");
+if (wanted === "0" || wanted === "1") $("setup-form").nines.value = wanted;
 
 renderStats();

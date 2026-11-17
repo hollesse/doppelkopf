@@ -1,0 +1,20 @@
+---
+pagination:
+  data: languages
+  size: 1
+  alias: lang
+permalink: "{{ lang.path }}ohne-neunen/"
+layout: layouts/base.njk
+subpath: "ohne-neunen/"
+eleventyComputed:
+  pageTitle: "{{ lang.tNoNines.title }}"
+  pageDescription: "{{ lang.tNoNines.sub | striptags }}"
+classicScripts: ["/assets/qrcode.js"]
+scripts: ["/assets/rules.js"]
+---
+{#- The rules without nines (40 cards): same page, with the texts from `noNines`. -#}
+{%- set t = lang.tNoNines -%}
+{%- set nines = false -%}
+{%- set variant = "ohne-neunen/" -%}
+{%- set play = lang.path + "play/?nines=0" -%}
+{% include "rules.njk" %}

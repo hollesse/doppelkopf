@@ -1,7 +1,7 @@
 // Doppelkopf rules, without any user interface. Used by the game page (ui.js),
 // the computer players (bots.js) and the tests, which run it in Node.
 //
-// Rules as on the rules page: 48 cards with nines, the first of two equal cards wins
+// Rules as on the rules page: 48 cards with nines (or 40 without), the first of two equal cards wins
 // (also the ten of hearts), Re/Kontra and further calls, wedding, solos, extra points
 // (fox, Charlie, Doppelkopf) in normal games, solos count triple.
 //
@@ -12,6 +12,7 @@ export const SUITS = ["♣", "♠", "♥", "♦"];
 export const RANKS = ["9", "10", "J", "Q", "K", "A"];
 export const POINTS = { 9: 0, 10: 10, J: 2, Q: 3, K: 4, A: 11 };
 export const PLAYERS = 4;
+/** Tricks in a game with nines; without nines there are 10. Use `size(state)`. */
 export const TRICKS = 12;
 
 /** Solos a player can announce. "silent" (a wedding kept quiet) is a solo too, but nobody announces it. */
@@ -26,12 +27,17 @@ const LIMIT = { 2: 90, 3: 60, 4: 30 };
 export const key = (card) => card.rank + card.suit;
 export const isRed = (card) => card.suit === "♥" || card.suit === "♦";
 export const next = (seat) => (seat + 1) % PLAYERS;
+/** Cards per player at the start, which is also the number of tricks: 12, or 10 without nines. */
+export const size = (state) => state.size ?? TRICKS;
 
 // ---------- Cards ----------
 
-export function createDeck() {
+/** All cards: 48, or 40 without the nines. */
+export function createDeck({ nines = true } = {}) {
   const deck = [];
-  for (const copy of ["a", "b"]) for (const suit of SUITS) for (const rank of RANKS) deck.push({ id: rank + suit + copy, rank, suit });
+  for (const copy of ["a", "b"]) {
+    for (const suit of SUITS) for (const rank of RANKS) if (nines || rank !== "9") deck.push({ id: rank + suit + copy, rank, suit });
+  }
   return deck;
 }
 
@@ -106,16 +112,22 @@ export const trickPoints = (trick) => trick.reduce((sum, { card }) => sum + POIN
 
 // ---------- A new game ----------
 
-/** Deals a new game. `dealer` is a seat; the next one leads and declares first. */
-export function createGame({ dealer = 0, random = Math.random, hands = null } = {}) {
-  const deck = hands ? null : shuffle(createDeck(), random);
+/**
+ * Deals a new game. `dealer` is a seat; the next one leads and declares first.
+ * Without nines (`nines: false`) everyone gets 10 cards instead of 12.
+ */
+export function createGame({ dealer = 0, random = Math.random, hands = null, nines = true } = {}) {
+  const deck = hands ? null : shuffle(createDeck({ nines }), random);
   const leader = next(dealer);
+  const each = hands ? hands[0].length : deck.length / PLAYERS;
   return {
     dealer,
     leader,
+    nines: hands ? each === 12 : nines,
+    size: each, // cards per player = number of tricks
     phase: "reserve", // → "play" → "over"
     turn: leader,
-    players: Array.from({ length: PLAYERS }, (_, p) => ({ hand: hands ? hands[p] : deck.slice(p * 12, p * 12 + 12) })),
+    players: Array.from({ length: PLAYERS }, (_, p) => ({ hand: hands ? hands[p] : deck.slice(p * each, p * each + each) })),
     declarations: Array(PLAYERS).fill(null), // "healthy" | "wedding" | a solo
     contract: null, // "normal" | "wedding" | "silent" | one of SOLOS
     soloist: null, // seat of a solo player, also a wedding without partner
@@ -255,7 +267,7 @@ export function play(state, p, id) {
   state.turn = winner;
   events.push({ type: "trick", winner, points, cards });
   if (state.contract === "wedding" && !state.clarified) events.push(...clarifyWedding(state, winner));
-  if (state.tricks.length === TRICKS) {
+  if (state.tricks.length === size(state)) {
     state.phase = "over";
     state.result = score(state);
     events.push({ type: "over", result: state.result });
@@ -285,8 +297,8 @@ function clarifyWedding(state, winner) {
 
 /**
  * The next call `p` can make now (1 = Re/Kontra … 5 = black), or 0.
- * Level L is allowed while you still hold at least 12 − L cards; in a wedding the
- * deadlines move back by the number of tricks it took to find the partner.
+ * Level L is allowed while you still hold at least 12 − L cards (10 − L without nines);
+ * in a wedding the deadlines move back by the number of tricks it took to find the partner.
  */
 export function nextCall(state, p) {
   if (state.phase !== "play") return 0;
@@ -295,7 +307,7 @@ export function nextCall(state, p) {
   const level = state.calls[side] + 1;
   if (level > 5) return 0;
   const cards = state.players[p].hand.length;
-  return cards >= 12 - level - state.clarified ? level : 0;
+  return cards >= size(state) - level - state.clarified ? level : 0;
 }
 
 export function call(state, p) {
@@ -383,7 +395,7 @@ function specialPoints(state) {
       if (key(card) === "A♦" && party(state, player) !== side) found.push({ id: "fox", party: side, trick: i });
     }
     if (trick.points >= 40) found.push({ id: "doppelkopf", party: side, trick: i });
-    if (i === TRICKS - 1) {
+    if (i === state.tricks.length - 1) {
       const best = trick.cards.find(({ player }) => player === trick.winner)?.card;
       if (best && key(best) === "J♣") found.push({ id: "karlchen", party: side, trick: i });
     }
